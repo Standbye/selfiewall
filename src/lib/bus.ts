@@ -16,8 +16,10 @@ globalForBus.photoBus = photoBus;
 
 export type WallPhoto = {
   id: string;
+  type: string;
   name: string | null;
   message: string | null;
+  likeCount: number;
   createdAt: string;
 };
 
@@ -27,4 +29,8 @@ export function emitPhotoApproved(eventId: string, photo: WallPhoto) {
 
 export function emitPhotoRemoved(eventId: string, photoId: string) {
   photoBus.emit(`photo-removed:${eventId}`, photoId);
+}
+
+export function emitLike(eventId: string, photoId: string, count: number) {
+  photoBus.emit(`like:${eventId}`, { id: photoId, count });
 }

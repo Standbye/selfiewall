@@ -22,25 +22,32 @@ export async function POST(
   }
   if (event.status !== "active") {
     return NextResponse.json(
-      { error: "Dieses Event ist beendet – es können keine Bilder mehr hochgeladen werden." },
+      { error: "Dieses Event ist beendet – es können keine Beiträge mehr eingereicht werden." },
       { status: 410 }
     );
   }
 
   const formData = await req.formData();
+  const type = formData.get("type") === "text" ? "text" : "photo";
   const file = formData.get("file");
   const name = (formData.get("name") as string | null)?.trim().slice(0, 50) || null;
-  const message = (formData.get("message") as string | null)?.trim().slice(0, 200) || null;
+  const message = (formData.get("message") as string | null)?.trim().slice(0, 300) || null;
   const consent = formData.get("consent");
 
   if (consent !== "true") {
     return NextResponse.json({ error: "Bitte bestätige die Einverständniserklärung." }, { status: 400 });
   }
-  if (!(file instanceof File) || file.size === 0) {
-    return NextResponse.json({ error: "Kein Bild übermittelt." }, { status: 400 });
-  }
-  if (file.size > MAX_UPLOAD_BYTES) {
-    return NextResponse.json({ error: "Das Bild ist zu groß (max. 15 MB)." }, { status: 413 });
+  if (type === "text") {
+    if (!message) {
+      return NextResponse.json({ error: "Bitte schreibe eine Nachricht." }, { status: 400 });
+    }
+  } else {
+    if (!(file instanceof File) || file.size === 0) {
+      return NextResponse.json({ error: "Kein Bild übermittelt." }, { status: 400 });
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return NextResponse.json({ error: "Das Bild ist zu groß (max. 15 MB)." }, { status: 413 });
+    }
   }
 
   const ip =
@@ -51,7 +58,7 @@ export async function POST(
   const isNewUploader = !uploaderKey;
   if (!uploaderKey) uploaderKey = crypto.randomUUID();
 
-  // Rate-Limit: max. 10 Bilder pro 30 Minuten pro Gerät bzw. IP
+  // Rate-Limit: max. 10 Beiträge pro 30 Minuten pro Gerät bzw. IP
   const since = new Date(Date.now() - RATE_LIMIT_WINDOW_MS);
   const recent = await prisma.photo.count({
     where: {
@@ -62,39 +69,42 @@ export async function POST(
   });
   if (recent >= RATE_LIMIT_COUNT) {
     return NextResponse.json(
-      { error: "Du hast gerade viele Bilder hochgeladen – warte bitte ein paar Minuten." },
+      { error: "Du hast gerade viele Beiträge geschickt – warte bitte ein paar Minuten." },
       { status: 429 }
     );
   }
 
-  // Serverseitig immer neu kodieren: normalisiert Orientierung, entfernt
-  // EXIF-Daten und stellt sicher, dass nur echte Bilder gespeichert werden.
-  let fullBuffer: Buffer;
-  let thumbBuffer: Buffer;
-  try {
-    const input = Buffer.from(await file.arrayBuffer());
-    const base = sharp(input, { failOn: "error" }).rotate();
-    fullBuffer = await base
-      .clone()
-      .resize(1920, 1920, { fit: "inside", withoutEnlargement: true })
-      .jpeg({ quality: 85 })
-      .toBuffer();
-    thumbBuffer = await base
-      .clone()
-      .resize(400, 400, { fit: "cover" })
-      .jpeg({ quality: 75 })
-      .toBuffer();
-  } catch {
-    return NextResponse.json(
-      { error: "Das Bild konnte nicht verarbeitet werden – bitte versuche ein anderes." },
-      { status: 422 }
-    );
+  // Bei Bildern: serverseitig immer neu kodieren (Orientierung, EXIF-Entfernung,
+  // Absicherung gegen Nicht-Bilder)
+  let fullBuffer: Buffer | null = null;
+  let thumbBuffer: Buffer | null = null;
+  if (type === "photo") {
+    try {
+      const input = Buffer.from(await (file as File).arrayBuffer());
+      const base = sharp(input, { failOn: "error" }).rotate();
+      fullBuffer = await base
+        .clone()
+        .resize(1920, 1920, { fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+      thumbBuffer = await base
+        .clone()
+        .resize(400, 400, { fit: "cover" })
+        .jpeg({ quality: 75 })
+        .toBuffer();
+    } catch {
+      return NextResponse.json(
+        { error: "Das Bild konnte nicht verarbeitet werden – bitte versuche ein anderes." },
+        { status: 422 }
+      );
+    }
   }
 
   const status = event.moderationMode === "post" ? "approved" : "pending";
   const photo = await prisma.photo.create({
     data: {
       eventId: event.id,
+      type,
       name,
       message,
       status,
@@ -104,15 +114,19 @@ export async function POST(
     },
   });
 
-  ensureEventDir(event.id);
-  await fs.writeFile(photoPath(event.id, photo.id, "full"), fullBuffer);
-  await fs.writeFile(photoPath(event.id, photo.id, "thumb"), thumbBuffer);
+  if (type === "photo" && fullBuffer && thumbBuffer) {
+    ensureEventDir(event.id);
+    await fs.writeFile(photoPath(event.id, photo.id, "full"), fullBuffer);
+    await fs.writeFile(photoPath(event.id, photo.id, "thumb"), thumbBuffer);
+  }
 
   if (status === "approved") {
     emitPhotoApproved(event.id, {
       id: photo.id,
+      type: photo.type,
       name: photo.name,
       message: photo.message,
+      likeCount: 0,
       createdAt: photo.createdAt.toISOString(),
     });
   }

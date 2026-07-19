@@ -23,7 +23,7 @@ export async function GET(
   }
 
   const photos = await prisma.photo.findMany({
-    where: { eventId: event.id, status: "approved" },
+    where: { eventId: event.id, status: "approved", type: "photo" },
     orderBy: { createdAt: "asc" },
   });
 

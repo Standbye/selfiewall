@@ -18,7 +18,10 @@ export default async function ModerationPage({
         ← {event.title}
       </Link>
       <h1 className="mb-4 text-2xl font-bold text-zinc-900">Moderation</h1>
-      <ModerationGrid eventId={event.id} moderationMode={event.moderationMode} />
+      <ModerationGrid
+        mode={{ kind: "admin", eventId: event.id }}
+        moderationMode={event.moderationMode}
+      />
     </div>
   );
 }

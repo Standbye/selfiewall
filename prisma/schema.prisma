@@ -15,6 +15,10 @@ model User {
   email         String    @unique
   emailVerified Boolean   @default(false)
   image         String?
+  role          String?   // "admin" (Superadmin) | "user" (Veranstalter)
+  banned        Boolean?  @default(false)
+  banReason     String?
+  banExpires    DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
@@ -30,10 +34,11 @@ model Session {
   token     String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  ipAddress String?
-  userAgent String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress      String?
+  userAgent      String?
+  impersonatedBy String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("session")
 }
@@ -71,21 +76,30 @@ model Verification {
 // ---------- Selfiewall ----------
 
 model Event {
-  id             String    @id @default(cuid())
-  token          String    @unique
-  title          String
-  motto          String?
-  primaryColor   String    @default("#e11d48")
-  bgColor        String    @default("#18181b")
-  logoPath       String?
-  moderationMode String    @default("pre") // "pre" | "post"
-  displaySeconds Int       @default(8)
-  status         String    @default("active") // "active" | "closed"
-  ownerId        String
-  owner          User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  photos         Photo[]
-  createdAt      DateTime  @default(now())
-  closedAt       DateTime?
+  id              String    @id @default(cuid())
+  token           String    @unique
+  moderationToken String?   @unique
+  title           String
+  motto           String?
+  primaryColor    String    @default("#e11d48")
+  bgColor         String    @default("#18181b")
+  logoPath        String?
+  bgImagePath     String?
+  bgDim           Int       @default(40) // Abdunkelung des Hintergrundbilds in %
+  fontFamily      String    @default("geist") // geist | playfair | caveat | montserrat | fredoka
+  polaroidColor   String    @default("#ffffff")
+  polaroidRadius  Int       @default(4)
+  customCssUpload String?
+  customCssWall   String?
+  customCssStream String?
+  moderationMode  String    @default("pre") // "pre" | "post"
+  displaySeconds  Int       @default(8)
+  status          String    @default("active") // "active" | "closed"
+  ownerId         String
+  owner           User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  photos          Photo[]
+  createdAt       DateTime  @default(now())
+  closedAt        DateTime?
 
   @@map("event")
 }
@@ -94,15 +108,28 @@ model Photo {
   id          String    @id @default(cuid())
   eventId     String
   event       Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  type        String    @default("photo") // "photo" | "text" (gemalte Bilder sind "photo")
   name        String?
   message     String?
   status      String    @default("pending") // "pending" | "approved" | "rejected"
   uploaderKey String
   ip          String?
+  likes       Like[]
   createdAt   DateTime  @default(now())
   approvedAt  DateTime?
 
   @@index([eventId, status])
   @@index([eventId, uploaderKey, createdAt])
   @@map("photo")
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  photoId   String
+  photo     Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  deviceKey String
+  createdAt DateTime @default(now())
+
+  @@unique([photoId, deviceKey])
+  @@map("like")
 }

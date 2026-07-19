@@ -2,7 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "node:fs/promises";
 import { prisma } from "@/lib/prisma";
 import { getUser } from "@/lib/session";
-import { photoPath, logoPath } from "@/lib/storage";
+import { photoPath, logoPath, bgImagePath } from "@/lib/storage";
+
+export const dynamic = "force-dynamic";
+
+async function serveStatic(file: string, contentType: string) {
+  try {
+    const buf = await fs.readFile(file);
+    return new NextResponse(new Uint8Array(buf), {
+      headers: { "Content-Type": contentType, "Cache-Control": "public, max-age=300" },
+    });
+  } catch {
+    return new NextResponse("Not found", { status: 404 });
+  }
+}
 
 export async function GET(
   req: NextRequest,
@@ -11,30 +24,34 @@ export async function GET(
   const { id } = await params;
   const variant = req.nextUrl.searchParams.get("v") === "thumb" ? "thumb" : "full";
 
-  // Sonderfall Event-Logo: /api/img/logo-<eventId>
+  // Sonderfälle: Event-Logo (/api/img/logo-<eventId>) und
+  // Hintergrundbild (/api/img/bg-<eventId>)
   if (id.startsWith("logo-")) {
     const event = await prisma.event.findUnique({ where: { id: id.slice(5) } });
     if (!event?.logoPath) return new NextResponse("Not found", { status: 404 });
-    try {
-      const buf = await fs.readFile(logoPath(event.id));
-      return new NextResponse(new Uint8Array(buf), {
-        headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=300" },
-      });
-    } catch {
-      return new NextResponse("Not found", { status: 404 });
-    }
+    return serveStatic(logoPath(event.id), "image/png");
+  }
+  if (id.startsWith("bg-")) {
+    const event = await prisma.event.findUnique({ where: { id: id.slice(3) } });
+    if (!event?.bgImagePath) return new NextResponse("Not found", { status: 404 });
+    return serveStatic(bgImagePath(event.id), "image/jpeg");
   }
 
   const photo = await prisma.photo.findUnique({ where: { id } });
-  if (!photo) return new NextResponse("Not found", { status: 404 });
+  if (!photo || photo.type !== "photo") return new NextResponse("Not found", { status: 404 });
 
-  // Nicht freigegebene Bilder sieht nur der Event-Besitzer (Moderation)
+  // Nicht freigegebene Bilder sehen nur der Event-Besitzer oder Inhaber
+  // des Moderations-Links (?mt=<token>)
   if (photo.status !== "approved") {
-    const user = await getUser();
-    if (!user) return new NextResponse("Forbidden", { status: 403 });
+    const modToken = req.nextUrl.searchParams.get("mt");
     const event = await prisma.event.findUnique({ where: { id: photo.eventId } });
-    if (!event || event.ownerId !== user.id) {
-      return new NextResponse("Forbidden", { status: 403 });
+    if (!event) return new NextResponse("Not found", { status: 404 });
+    const viaModLink = !!modToken && !!event.moderationToken && modToken === event.moderationToken;
+    if (!viaModLink) {
+      const user = await getUser();
+      if (!user || event.ownerId !== user.id) {
+        return new NextResponse("Forbidden", { status: 403 });
+      }
     }
   }
 

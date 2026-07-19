@@ -15,6 +15,7 @@ export async function GET(
   const encoder = new TextEncoder();
   const addedEvent = `photo:${event.id}`;
   const removedEvent = `photo-removed:${event.id}`;
+  const likeEvent = `like:${event.id}`;
 
   const stream = new ReadableStream({
     start(controller) {
@@ -27,6 +28,7 @@ export async function GET(
       };
       const onPhoto = (photo: WallPhoto) => send("photo", photo);
       const onRemoved = (photoId: string) => send("removed", { id: photoId });
+      const onLike = (data: { id: string; count: number }) => send("like", data);
       const heartbeat = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(`: ping\n\n`));
@@ -39,6 +41,7 @@ export async function GET(
         clearInterval(heartbeat);
         photoBus.off(addedEvent, onPhoto);
         photoBus.off(removedEvent, onRemoved);
+        photoBus.off(likeEvent, onLike);
         try {
           controller.close();
         } catch {
@@ -48,6 +51,7 @@ export async function GET(
 
       photoBus.on(addedEvent, onPhoto);
       photoBus.on(removedEvent, onRemoved);
+      photoBus.on(likeEvent, onLike);
       req.signal.addEventListener("abort", cleanup);
       send("hello", { ok: true });
     },

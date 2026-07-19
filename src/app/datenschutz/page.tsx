@@ -38,7 +38,8 @@ export default function DatenschutzPage() {
         <h2 className="text-lg font-semibold">Cookies</h2>
         <p>
           Es wird ausschließlich ein technisch notwendiges Cookie zur
-          Upload-Begrenzung gesetzt. Es findet kein Tracking statt.
+          Upload-Begrenzung und zur Vermeidung doppelter
+          „Gefällt-mir“-Markierungen gesetzt. Es findet kein Tracking statt.
         </p>
       </div>
     </main>

@@ -18,6 +18,14 @@ export default async function AdminLayout({
             📸 Selfiewall
           </Link>
           <div className="flex items-center gap-3 text-sm text-zinc-600">
+            {user.role === "admin" && (
+              <Link
+                href="/admin/users"
+                className="rounded-lg px-2 py-1.5 font-medium text-zinc-700 transition hover:bg-zinc-100"
+              >
+                Benutzer
+              </Link>
+            )}
             <span className="hidden sm:inline">{user.name}</span>
             <LogoutButton />
           </div>

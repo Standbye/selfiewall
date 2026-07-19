@@ -21,3 +21,16 @@ export async function requireOwnedEvent(eventId: string) {
   if (!event || event.ownerId !== user.id) redirect("/admin");
   return { user, event };
 }
+
+/** Nur für den Superadmin (erster Account, Rolle "admin"). */
+export async function requireSuperadmin() {
+  const user = await requireUser();
+  if (user.role !== "admin") redirect("/admin");
+  return user;
+}
+
+/** Lädt ein Event über den geheimen Moderations-Token (ohne Login). */
+export async function findEventByModerationToken(modToken: string) {
+  if (!modToken) return null;
+  return prisma.event.findUnique({ where: { moderationToken: modToken } });
+}

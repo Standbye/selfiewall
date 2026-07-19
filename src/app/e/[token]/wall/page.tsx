@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { prisma } from "@/lib/prisma";
 import { Wall } from "@/components/Wall";
+import { fontCss } from "@/lib/fonts";
+import { sanitizeCustomCss } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
 
@@ -17,17 +19,26 @@ export default async function WallPage({
   const baseUrl = process.env.BASE_URL ?? "http://localhost:3000";
   const uploadUrl = `${baseUrl}/e/${event.token}`;
   const qrDataUrl = await QRCode.toDataURL(uploadUrl, { width: 300, margin: 1 });
+  const customCss = sanitizeCustomCss(event.customCssWall);
 
   return (
-    <Wall
-      token={event.token}
-      title={event.title}
-      motto={event.motto}
-      primaryColor={event.primaryColor}
-      bgColor={event.bgColor}
-      displaySeconds={event.displaySeconds}
-      qrDataUrl={qrDataUrl}
-      active={event.status === "active"}
-    />
+    <div style={{ fontFamily: fontCss(event.fontFamily) }}>
+      {customCss && <style dangerouslySetInnerHTML={{ __html: customCss }} />}
+      <Wall
+        token={event.token}
+        title={event.title}
+        motto={event.motto}
+        primaryColor={event.primaryColor}
+        polaroidColor={event.polaroidColor}
+        polaroidRadius={event.polaroidRadius}
+        bgColor={event.bgColor}
+        bgImageUrl={event.bgImagePath ? `/api/img/bg-${event.id}` : null}
+        bgDim={event.bgDim}
+        displaySeconds={event.displaySeconds}
+        qrDataUrl={qrDataUrl}
+        logoUrl={event.logoPath ? `/api/img/logo-${event.id}` : null}
+        active={event.status === "active"}
+      />
+    </div>
   );
 }

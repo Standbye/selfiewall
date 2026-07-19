@@ -5,11 +5,16 @@ import { moderatePhoto } from "@/app/admin/actions";
 
 type AdminPhoto = {
   id: string;
+  type: string;
   name: string | null;
   message: string | null;
   status: string;
   createdAt: string;
 };
+
+type Mode =
+  | { kind: "admin"; eventId: string }
+  | { kind: "link"; modToken: string };
 
 const TABS = [
   { key: "pending", label: "Wartend" },
@@ -18,10 +23,10 @@ const TABS = [
 ] as const;
 
 export function ModerationGrid({
-  eventId,
+  mode,
   moderationMode,
 }: {
-  eventId: string;
+  mode: Mode;
   moderationMode: string;
 }) {
   const [photos, setPhotos] = useState<AdminPhoto[]>([]);
@@ -31,9 +36,22 @@ export function ModerationGrid({
   const [loaded, setLoaded] = useState(false);
   const [, startTransition] = useTransition();
 
+  const listUrl =
+    mode.kind === "admin"
+      ? `/api/admin/events/${mode.eventId}/photos`
+      : `/api/mod/${mode.modToken}/photos`;
+
+  const imgSrc = useCallback(
+    (id: string) =>
+      mode.kind === "admin"
+        ? `/api/img/${id}?v=thumb`
+        : `/api/img/${id}?v=thumb&mt=${mode.modToken}`,
+    [mode]
+  );
+
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch(`/api/admin/events/${eventId}/photos`, { cache: "no-store" });
+      const res = await fetch(listUrl, { cache: "no-store" });
       if (!res.ok) return;
       const data = await res.json();
       setPhotos(data.photos);
@@ -41,7 +59,7 @@ export function ModerationGrid({
     } catch {
       // Netzwerkfehler → nächster Poll versucht es erneut
     }
-  }, [eventId]);
+  }, [listUrl]);
 
   useEffect(() => {
     const initial = setTimeout(refresh, 0);
@@ -53,8 +71,7 @@ export function ModerationGrid({
   }, [refresh]);
 
   function act(photoId: string, action: "approve" | "reject" | "delete") {
-    if (action === "delete" && !confirm("Bild endgültig löschen?")) return;
-    // Optimistisch aktualisieren, damit die Moderation flott von der Hand geht
+    if (action === "delete" && !confirm("Beitrag endgültig löschen?")) return;
     setPhotos((prev) =>
       action === "delete"
         ? prev.filter((p) => p.id !== photoId)
@@ -66,7 +83,15 @@ export function ModerationGrid({
     );
     startTransition(async () => {
       try {
-        await moderatePhoto(photoId, action);
+        if (mode.kind === "admin") {
+          await moderatePhoto(photoId, action);
+        } else {
+          await fetch(`/api/mod/${mode.modToken}/photos/${photoId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action }),
+          });
+        }
       } finally {
         refresh();
       }
@@ -98,28 +123,36 @@ export function ModerationGrid({
       </div>
 
       {!loaded ? (
-        <p className="py-10 text-center text-zinc-500">Lade Bilder…</p>
+        <p className="py-10 text-center text-zinc-500">Lade Beiträge…</p>
       ) : visible.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-zinc-300 bg-white py-10 text-center text-zinc-500">
-          {tab === "pending" ? "Keine wartenden Bilder – alles erledigt ✅" : "Keine Bilder in dieser Ansicht."}
+          {tab === "pending" ? "Keine wartenden Beiträge – alles erledigt ✅" : "Keine Beiträge in dieser Ansicht."}
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
           {visible.map((photo) => (
             <div key={photo.id} className="overflow-hidden rounded-xl bg-white shadow-sm">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`/api/img/${photo.id}?v=thumb`}
-                alt={photo.name ?? "Gästebild"}
-                className="aspect-square w-full object-cover"
-                loading="lazy"
-              />
+              {photo.type === "text" ? (
+                <div className="flex aspect-square w-full items-center justify-center bg-rose-50 p-3">
+                  <p className="line-clamp-6 text-center text-sm font-medium text-zinc-700">
+                    💬 „{photo.message}“
+                  </p>
+                </div>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={imgSrc(photo.id)}
+                  alt={photo.name ?? "Beitrag"}
+                  className="aspect-square w-full object-cover"
+                  loading="lazy"
+                />
+              )}
               <div className="p-2">
-                {(photo.name || photo.message) && (
+                {(photo.name || (photo.type !== "text" && photo.message)) && (
                   <p className="mb-2 truncate text-xs text-zinc-600">
                     {photo.name && <span className="font-medium">{photo.name}</span>}
-                    {photo.name && photo.message && " · "}
-                    {photo.message}
+                    {photo.name && photo.type !== "text" && photo.message && " · "}
+                    {photo.type !== "text" && photo.message}
                   </p>
                 )}
                 <div className="flex gap-1">

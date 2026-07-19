@@ -15,6 +15,10 @@ export function logoPath(eventId: string) {
   return path.join(eventDir(eventId), "logo.png");
 }
 
+export function bgImagePath(eventId: string) {
+  return path.join(eventDir(eventId), "background.jpg");
+}
+
 export function ensureEventDir(eventId: string) {
   fs.mkdirSync(eventDir(eventId), { recursive: true });
 }

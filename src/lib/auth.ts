@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "@better-auth/prisma-adapter";
 import { APIError, createAuthMiddleware } from "better-auth/api";
+import { admin } from "better-auth/plugins";
 import { prisma } from "./prisma";
 
 export const auth = betterAuth({
@@ -10,13 +11,16 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  plugins: [
+    admin(), // Superadmin-Rolle "admin", Nutzerverwaltung über /admin/users
+  ],
   hooks: {
-    // Registrierung ist nur offen, solange noch kein Account existiert
-    // (Erst-Setup) oder wenn ALLOW_REGISTRATION=true gesetzt ist.
+    // Öffentliche Registrierung gibt es nur für den allerersten Account
+    // (Erst-Setup). Danach legt der Superadmin Veranstalter an.
     before: createAuthMiddleware(async (ctx) => {
       if (ctx.path === "/sign-up/email") {
         const userCount = await prisma.user.count();
-        if (userCount > 0 && process.env.ALLOW_REGISTRATION !== "true") {
+        if (userCount > 0) {
           throw new APIError("FORBIDDEN", {
             message: "Die Registrierung ist deaktiviert.",
           });
@@ -24,4 +28,22 @@ export const auth = betterAuth({
       }
     }),
   },
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          // Der erste Account der Instanz wird Superadmin
+          const count = await prisma.user.count();
+          if (count === 1) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { role: "admin" },
+            });
+          }
+        },
+      },
+    },
+  },
 });
+
+export type AuthUser = typeof auth.$Infer.Session.user;

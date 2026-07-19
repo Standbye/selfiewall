@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type WallPhoto = {
   id: string;
+  type: string;
   name: string | null;
   message: string | null;
+  likeCount: number;
   createdAt: string;
 };
 
@@ -14,18 +16,28 @@ export function Wall({
   title,
   motto,
   primaryColor,
+  polaroidColor,
+  polaroidRadius,
   bgColor,
+  bgImageUrl,
+  bgDim,
   displaySeconds,
   qrDataUrl,
+  logoUrl,
   active,
 }: {
   token: string;
   title: string;
   motto: string | null;
   primaryColor: string;
+  polaroidColor: string;
+  polaroidRadius: number;
   bgColor: string;
+  bgImageUrl: string | null;
+  bgDim: number;
   displaySeconds: number;
   qrDataUrl: string;
+  logoUrl: string | null;
   active: boolean;
 }) {
   const [photos, setPhotos] = useState<WallPhoto[]>([]);
@@ -62,7 +74,6 @@ export function Wall({
       showPhoto(null);
       return;
     }
-    // Zuletzt gezeigte Bilder vermeiden, solange genug Auswahl da ist
     const candidates = pool.filter(
       (p) => !recentIds.current.includes(p.id) || pool.length <= recentIds.current.length
     );
@@ -107,6 +118,16 @@ export function Wall({
       priorityQueue.current = priorityQueue.current.filter((p) => p.id !== id);
       if (currentRef.current?.id === id) setCurrent(null);
     });
+    source.addEventListener("like", (e) => {
+      const { id, count } = JSON.parse((e as MessageEvent).data) as {
+        id: string;
+        count: number;
+      };
+      setPhotos((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, likeCount: count } : p))
+      );
+      setCurrent((cur) => (cur?.id === id ? { ...cur, likeCount: count } : cur));
+    });
     return () => source.close();
   }, [token]);
 
@@ -118,15 +139,15 @@ export function Wall({
   }, [advance, displaySeconds, photos.length, current]);
 
   const gridPhotos = useMemo(() => {
-    if (photos.length === 0) return [];
-    // Deterministisch "mischen" (Hash der Id), damit das Grid bei jedem
-    // Re-Render stabil bleibt und nicht flackert.
+    const imagePhotos = photos.filter((p) => p.type === "photo");
+    if (imagePhotos.length === 0) return [];
+    // Deterministisch "mischen" (Hash der Id), damit das Grid stabil bleibt
     const hash = (s: string) => {
       let h = 0;
       for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
       return h;
     };
-    const shuffled = [...photos].sort((a, b) => hash(a.id) - hash(b.id));
+    const shuffled = [...imagePhotos].sort((a, b) => hash(a.id) - hash(b.id));
     const tiles: WallPhoto[] = [];
     while (tiles.length < Math.max(140, shuffled.length)) {
       tiles.push(...shuffled);
@@ -134,11 +155,25 @@ export function Wall({
     return tiles.slice(0, 140);
   }, [photos]);
 
+  const polaroidStyle: React.CSSProperties = {
+    backgroundColor: polaroidColor,
+    borderRadius: polaroidRadius,
+  };
+
   return (
-    <div
-      className="fixed inset-0 overflow-hidden"
-      style={{ backgroundColor: bgColor }}
-    >
+    <div className="fixed inset-0 overflow-hidden" style={{ backgroundColor: bgColor }}>
+      {/* Optionales Hintergrundbild mit Abdunkelung */}
+      {bgImageUrl && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={bgImageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <div
+            className="absolute inset-0 bg-black"
+            style={{ opacity: bgDim / 100 }}
+          />
+        </>
+      )}
+
       {/* Hintergrund: Grid aller bisherigen Bilder */}
       {gridPhotos.length > 0 && (
         <div
@@ -167,10 +202,20 @@ export function Wall({
         }}
       />
 
+      {/* Logo-Overlay oben links */}
+      {logoUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={logoUrl}
+          alt=""
+          className="absolute left-5 top-5 z-10 max-h-20 max-w-40 object-contain drop-shadow-lg"
+        />
+      )}
+
       {/* Titel */}
       <div className="absolute left-0 right-0 top-6 z-10 text-center">
         <h1
-          className="text-3xl font-bold text-white drop-shadow-lg"
+          className="text-3xl font-bold text-white"
           style={{ textShadow: "0 2px 12px rgba(0,0,0,0.6)" }}
         >
           {title}
@@ -183,22 +228,43 @@ export function Wall({
         {current ? (
           <figure
             key={current.id + tilt}
-            className="polaroid-in max-h-full bg-white p-4 pb-5 shadow-2xl"
-            style={{ transform: `rotate(${tilt}deg)`, borderRadius: 4 }}
+            className="polaroid-in max-h-full p-4 pb-5 shadow-2xl"
+            style={{ ...polaroidStyle, transform: `rotate(${tilt}deg)` }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`/api/img/${current.id}`}
-              alt=""
-              className="max-h-[62vh] max-w-[70vw] object-contain"
-            />
-            <figcaption className="mt-3 min-h-6 text-center font-medium text-zinc-800">
-              {current.name && <span>{current.name}</span>}
-              {current.name && current.message && (
-                <span className="text-zinc-400"> · </span>
-              )}
-              {current.message && (
-                <span className="text-zinc-600">{current.message}</span>
+            {current.type === "text" ? (
+              <div
+                className="flex max-w-[70vw] items-center justify-center px-8 py-16 sm:min-h-[40vh] sm:min-w-[40vw]"
+                style={{ backgroundColor: `${primaryColor}18` }}
+              >
+                <p className="max-w-2xl text-center text-3xl font-semibold leading-snug text-zinc-800">
+                  „{current.message}“
+                </p>
+              </div>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={`/api/img/${current.id}`}
+                alt=""
+                className="max-h-[62vh] max-w-[70vw] object-contain"
+              />
+            )}
+            <figcaption className="mt-3 flex min-h-6 items-center justify-center gap-3 text-center font-medium text-zinc-800">
+              <span>
+                {current.name}
+                {current.name && current.type !== "text" && current.message && (
+                  <span className="text-zinc-400"> · </span>
+                )}
+                {current.type !== "text" && (
+                  <span className="text-zinc-600">{current.message}</span>
+                )}
+              </span>
+              {current.likeCount > 0 && (
+                <span
+                  className="rounded-full px-2 py-0.5 text-sm font-semibold text-white"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  ❤️ {current.likeCount}
+                </span>
               )}
             </figcaption>
           </figure>
@@ -207,13 +273,13 @@ export function Wall({
             <p className="text-6xl">📸</p>
             <p className="mt-6 text-2xl font-semibold">
               {active
-                ? "Noch keine Bilder – mach den Anfang!"
+                ? "Noch keine Beiträge – mach den Anfang!"
                 : "Danke für einen tollen Abend!"}
             </p>
             {active && (
               <>
                 <p className="mt-2 text-white/70">
-                  Scanne den QR-Code und lade dein erstes Foto hoch.
+                  Scanne den QR-Code und schicke Foto, Zeichnung oder Gruß.
                 </p>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
