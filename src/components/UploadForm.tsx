@@ -1,8 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DrawCanvas } from "./DrawCanvas";
 import { compressImage } from "@/lib/image-client";
+
+const CONSENT_KEY = "sw_consent";
 
 type Mode = "idle" | "photo" | "draw" | "text";
 
@@ -29,11 +31,25 @@ export function UploadForm({
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [consent, setConsent] = useState(false);
+  const [consentStored, setConsentStored] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<"photo" | "text" | null>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
   const galleryInput = useRef<HTMLInputElement>(null);
+
+  // Einwilligung wird pro Gerät gemerkt — die Checkbox erscheint nur beim
+  // ersten Beitrag, danach reicht der Hinweistext.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(CONSENT_KEY) === "true") {
+        setConsent(true);
+        setConsentStored(true);
+      }
+    } catch {
+      // localStorage gesperrt → Checkbox bleibt sichtbar
+    }
+  }, []);
 
   function pickFile(picked: File | Blob | null, alreadyCompressed = false) {
     setError(null);
@@ -47,7 +63,7 @@ export function UploadForm({
   function reset() {
     pickFile(null);
     setMessage("");
-    setConsent(false);
+    if (!consentStored) setConsent(false);
     setDone(null);
     setMode("idle");
   }
@@ -91,6 +107,12 @@ export function UploadForm({
         return;
       }
       setDone(mode === "text" ? "text" : "photo");
+      try {
+        localStorage.setItem(CONSENT_KEY, "true");
+        setConsentStored(true);
+      } catch {
+        // ohne localStorage bleibt die Checkbox beim nächsten Mal sichtbar
+      }
     } catch {
       setError("Senden fehlgeschlagen – bitte prüfe deine Verbindung.");
     } finally {
@@ -239,18 +261,25 @@ export function UploadForm({
         />
       )}
 
-      <label className="ev-text-soft flex items-start gap-3 text-sm">
-        <input
-          type="checkbox"
-          checked={consent}
-          onChange={(e) => setConsent(e.target.checked)}
-          className="mt-1 h-4 w-4"
-        />
-        <span>
-          Ich bin einverstanden, dass mein Beitrag auf dieser Veranstaltung auf
-          der Fotowand gezeigt wird und vom Veranstalter gespeichert wird.
-        </span>
-      </label>
+      {consentStored ? (
+        <p className="ev-text-faint text-xs">
+          Mit dem Absenden bist du einverstanden, dass dein Beitrag auf der
+          Fotowand gezeigt wird.
+        </p>
+      ) : (
+        <label className="ev-text-soft flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => setConsent(e.target.checked)}
+            className="mt-1 h-4 w-4"
+          />
+          <span>
+            Ich bin einverstanden, dass mein Beitrag auf dieser Veranstaltung auf
+            der Fotowand gezeigt wird und vom Veranstalter gespeichert wird.
+          </span>
+        </label>
+      )}
 
       {error && (
         <p
