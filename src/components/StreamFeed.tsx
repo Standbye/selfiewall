@@ -99,11 +99,11 @@ export function StreamFeed({
   }
 
   if (!loaded) {
-    return <p className="py-10 text-center text-white/60">Lade Beiträge…</p>;
+    return <p className="ev-text-soft py-10 text-center">Lade Beiträge…</p>;
   }
   if (photos.length === 0) {
     return (
-      <p className="rounded-2xl bg-white/10 py-10 text-center text-white/70">
+      <p className="ev-card ev-text-soft rounded-2xl py-10 text-center">
         Noch keine Beiträge – mach den Anfang! 📸
       </p>
     );

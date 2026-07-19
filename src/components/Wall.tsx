@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { isLightColor } from "@/lib/color";
 
 type WallPhoto = {
   id: string;
@@ -160,6 +161,14 @@ export function Wall({
     borderRadius: polaroidRadius,
   };
 
+  // Textfarbe passt sich der Hintergrund-Helligkeit an (heller Hintergrund
+  // ohne Bild → dunkle Schrift); mit Hintergrundbild dunkelt das Dim-Overlay
+  // ab, dann bleibt Weiß richtig.
+  const lightBg = !bgImageUrl && isLightColor(bgColor);
+  const fg = lightBg ? "#1c1c1a" : "#ffffff";
+  const fgSoft = lightBg ? "rgba(20,20,18,0.65)" : "rgba(255,255,255,0.7)";
+  const titleShadow = lightBg ? "none" : "0 2px 12px rgba(0,0,0,0.6)";
+
   return (
     <div className="fixed inset-0 overflow-hidden" style={{ backgroundColor: bgColor }}>
       {/* Optionales Hintergrundbild mit Abdunkelung */}
@@ -215,12 +224,12 @@ export function Wall({
       {/* Titel */}
       <div className="absolute left-0 right-0 top-6 z-10 text-center">
         <h1
-          className="text-3xl font-bold text-white"
-          style={{ textShadow: "0 2px 12px rgba(0,0,0,0.6)" }}
+          className="text-3xl font-bold"
+          style={{ color: fg, textShadow: titleShadow }}
         >
           {title}
         </h1>
-        {motto && <p className="mt-1 text-white/70">{motto}</p>}
+        {motto && <p className="mt-1" style={{ color: fgSoft }}>{motto}</p>}
       </div>
 
       {/* Vordergrund: Polaroid */}
@@ -269,7 +278,7 @@ export function Wall({
             </figcaption>
           </figure>
         ) : (
-          <div className="max-w-xl text-center text-white">
+          <div className="max-w-xl text-center" style={{ color: fg }}>
             <p className="text-6xl">📸</p>
             <p className="mt-6 text-2xl font-semibold">
               {active
@@ -278,7 +287,7 @@ export function Wall({
             </p>
             {active && (
               <>
-                <p className="mt-2 text-white/70">
+                <p className="mt-2" style={{ color: fgSoft }}>
                   Scanne den QR-Code und schicke Foto, Zeichnung oder Gruß.
                 </p>
                 {/* eslint-disable-next-line @next/next/no-img-element */}

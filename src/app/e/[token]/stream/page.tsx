@@ -27,8 +27,8 @@ export default async function StreamPage({
             <img src={`/api/img/logo-${event.id}`} alt="" className="max-h-12" />
           )}
           <div>
-            <h1 className="text-2xl font-bold text-white">{event.title}</h1>
-            {event.motto && <p className="text-sm text-white/70">{event.motto}</p>}
+            <h1 className="ev-text text-2xl font-bold">{event.title}</h1>
+            {event.motto && <p className="ev-text-soft text-sm">{event.motto}</p>}
           </div>
         </header>
 
@@ -44,10 +44,10 @@ export default async function StreamPage({
 
         <StreamFeed token={event.token} primaryColor={event.primaryColor} />
 
-        <footer className="mt-10 text-center text-xs text-white/40">
-          <Link href="/impressum" className="hover:text-white/70">Impressum</Link>
+        <footer className="ev-text-faint mt-10 text-center text-xs">
+          <Link href="/impressum" className="underline">Impressum</Link>
           {" · "}
-          <Link href="/datenschutz" className="hover:text-white/70">Datenschutz</Link>
+          <Link href="/datenschutz" className="underline">Datenschutz</Link>
         </footer>
       </div>
     </main>

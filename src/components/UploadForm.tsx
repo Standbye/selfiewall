@@ -6,6 +6,13 @@ import { compressImage } from "@/lib/image-client";
 
 type Mode = "idle" | "photo" | "draw" | "text";
 
+const OPTIONS: { mode: Exclude<Mode, "idle" | "photo"> | "camera" | "gallery"; icon: string; title: string; hint: string }[] = [
+  { mode: "camera", icon: "🤳", title: "Selfie machen", hint: "Kamera öffnet sich direkt" },
+  { mode: "gallery", icon: "🖼️", title: "Foto aus der Galerie", hint: "Vorhandenes Bild auswählen" },
+  { mode: "draw", icon: "🎨", title: "Bild malen", hint: "Mit dem Finger zeichnen" },
+  { mode: "text", icon: "💬", title: "Nachricht schreiben", hint: "Gruß als Textkarte an die Wall" },
+];
+
 export function UploadForm({
   token,
   primaryColor,
@@ -34,8 +41,7 @@ export function UploadForm({
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(picked ? URL.createObjectURL(picked) : null);
     setMode(picked ? "photo" : "idle");
-    if (picked && alreadyCompressed) setIsDrawing(true);
-    else setIsDrawing(false);
+    setIsDrawing(!!picked && alreadyCompressed);
   }
 
   function reset() {
@@ -44,6 +50,12 @@ export function UploadForm({
     setConsent(false);
     setDone(null);
     setMode("idle");
+  }
+
+  function choose(option: (typeof OPTIONS)[number]["mode"]) {
+    if (option === "camera") cameraInput.current?.click();
+    else if (option === "gallery") galleryInput.current?.click();
+    else setMode(option);
   }
 
   async function submit(e: React.FormEvent) {
@@ -88,12 +100,12 @@ export function UploadForm({
 
   if (done) {
     return (
-      <div className="rounded-2xl bg-white/10 p-8 text-center text-white">
+      <div className="ev-card rounded-2xl p-8 text-center">
         <p className="text-5xl">🎉</p>
-        <p className="mt-4 text-lg font-semibold">
+        <p className="ev-text mt-4 text-lg font-semibold">
           {done === "text" ? "Danke für deine Nachricht!" : "Danke für dein Bild!"}
         </p>
-        <p className="mt-1 text-sm text-white/70">
+        <p className="ev-text-soft mt-1 text-sm">
           {preModeration
             ? "Dein Beitrag wird kurz geprüft und erscheint dann auf der Wall."
             : "Dein Beitrag erscheint gleich auf der Wall – schau hin!"}
@@ -108,7 +120,7 @@ export function UploadForm({
           </a>
           <button
             onClick={reset}
-            className="w-full rounded-xl bg-white/10 py-3 font-semibold text-white transition hover:bg-white/15"
+            className="ev-card-btn ev-text w-full rounded-xl py-3 font-semibold transition"
           >
             Noch einen Beitrag schicken
           </button>
@@ -158,7 +170,7 @@ export function UploadForm({
           </button>
         </div>
       ) : mode === "text" ? (
-        <div className="rounded-2xl bg-white/10 p-4">
+        <div className="ev-card rounded-2xl p-4">
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -166,9 +178,9 @@ export function UploadForm({
             rows={5}
             autoFocus
             placeholder="Deine Nachricht an die Wall …"
-            className="w-full resize-none rounded-xl border-0 bg-transparent text-lg text-white placeholder-white/50 focus:outline-none"
+            className="ev-input w-full resize-none rounded-xl border-0 bg-transparent text-lg focus:outline-none"
           />
-          <div className="flex items-center justify-between text-xs text-white/50">
+          <div className="ev-text-faint flex items-center justify-between text-xs">
             <button type="button" onClick={() => setMode("idle")} className="underline">
               Abbrechen
             </button>
@@ -176,39 +188,37 @@ export function UploadForm({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => cameraInput.current?.click()}
-            className="rounded-2xl bg-white/10 p-5 text-center text-white transition hover:bg-white/15"
-          >
-            <span className="block text-4xl">🤳</span>
-            <span className="mt-2 block font-semibold">Selfie machen</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => galleryInput.current?.click()}
-            className="rounded-2xl bg-white/10 p-5 text-center text-white transition hover:bg-white/15"
-          >
-            <span className="block text-4xl">🖼️</span>
-            <span className="mt-2 block font-semibold">Aus Galerie</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("draw")}
-            className="rounded-2xl bg-white/10 p-5 text-center text-white transition hover:bg-white/15"
-          >
-            <span className="block text-4xl">🎨</span>
-            <span className="mt-2 block font-semibold">Bild malen</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("text")}
-            className="rounded-2xl bg-white/10 p-5 text-center text-white transition hover:bg-white/15"
-          >
-            <span className="block text-4xl">💬</span>
-            <span className="mt-2 block font-semibold">Nachricht schreiben</span>
-          </button>
+        <div className="space-y-2.5">
+          {OPTIONS.map((option, index) => (
+            <button
+              key={option.mode}
+              type="button"
+              onClick={() => choose(option.mode)}
+              className="flex w-full items-center gap-4 rounded-2xl px-4 py-3.5 text-left transition active:scale-[0.99]"
+              style={
+                index === 0
+                  ? { backgroundColor: primaryColor }
+                  : {
+                      backgroundColor: `${primaryColor}2b`,
+                      border: `1px solid ${primaryColor}77`,
+                    }
+              }
+            >
+              <span className="text-3xl">{option.icon}</span>
+              <span>
+                <span
+                  className={`block font-semibold ${index === 0 ? "text-white" : "ev-text"}`}
+                >
+                  {option.title}
+                </span>
+                <span
+                  className={`block text-xs ${index === 0 ? "text-white/75" : "ev-text-soft"}`}
+                >
+                  {option.hint}
+                </span>
+              </span>
+            </button>
+          ))}
         </div>
       )}
 
@@ -217,7 +227,7 @@ export function UploadForm({
         onChange={(e) => setName(e.target.value)}
         maxLength={50}
         placeholder="Dein Name (optional)"
-        className="w-full rounded-xl border-0 bg-white/10 px-4 py-3 text-white placeholder-white/50 focus:bg-white/15 focus:outline-none"
+        className="ev-input w-full rounded-xl border-0 px-4 py-3 focus:outline-none"
       />
       {mode !== "text" && (
         <input
@@ -225,11 +235,11 @@ export function UploadForm({
           onChange={(e) => setMessage(e.target.value)}
           maxLength={300}
           placeholder="Kurzer Gruß (optional)"
-          className="w-full rounded-xl border-0 bg-white/10 px-4 py-3 text-white placeholder-white/50 focus:bg-white/15 focus:outline-none"
+          className="ev-input w-full rounded-xl border-0 px-4 py-3 focus:outline-none"
         />
       )}
 
-      <label className="flex items-start gap-3 text-sm text-white/80">
+      <label className="ev-text-soft flex items-start gap-3 text-sm">
         <input
           type="checkbox"
           checked={consent}
@@ -243,7 +253,12 @@ export function UploadForm({
       </label>
 
       {error && (
-        <p className="rounded-xl bg-red-500/20 px-4 py-3 text-sm text-red-100">{error}</p>
+        <p
+          className="ev-text rounded-xl px-4 py-3 text-sm"
+          style={{ backgroundColor: "rgba(239, 68, 68, 0.3)" }}
+        >
+          {error}
+        </p>
       )}
 
       <button

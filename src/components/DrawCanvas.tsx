@@ -114,7 +114,7 @@ export function DrawCanvas({
               className="h-8 w-8 rounded-full border-2 transition"
               style={{
                 backgroundColor: c,
-                borderColor: color === c ? primaryColor : "rgba(255,255,255,0.4)",
+                borderColor: color === c ? primaryColor : "var(--ev-text-faint, rgba(255,255,255,0.4))",
                 transform: color === c ? "scale(1.15)" : undefined,
               }}
             />
@@ -127,20 +127,23 @@ export function DrawCanvas({
               type="button"
               onClick={() => setSize(s)}
               aria-label={`Stiftgröße ${s}`}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 transition"
+              className="ev-card flex h-8 w-8 items-center justify-center rounded-full transition"
               style={{ outline: size === s ? `2px solid ${primaryColor}` : undefined }}
             >
-              <span className="rounded-full bg-white" style={{ width: s, height: s }} />
+              <span
+                className="rounded-full"
+                style={{ width: s, height: s, backgroundColor: "var(--ev-text, #fff)" }}
+              />
             </button>
           ))}
         </div>
       </div>
 
       <div className="flex gap-2">
-        <button type="button" onClick={onCancel} className="flex-1 rounded-xl bg-white/10 py-3 font-semibold text-white">
+        <button type="button" onClick={onCancel} className="ev-card-btn ev-text flex-1 rounded-xl py-3 font-semibold">
           Abbrechen
         </button>
-        <button type="button" onClick={undo} className="flex-1 rounded-xl bg-white/10 py-3 font-semibold text-white">
+        <button type="button" onClick={undo} className="ev-card-btn ev-text flex-1 rounded-xl py-3 font-semibold">
           ↩︎ Rückgängig
         </button>
         <button

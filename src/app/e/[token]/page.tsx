@@ -47,8 +47,8 @@ export default async function GuestUploadPage({
               className="mx-auto mb-3 max-h-20"
             />
           )}
-          <h1 className="text-3xl font-bold text-white">{event.title}</h1>
-          {event.motto && <p className="mt-1 text-white/70">{event.motto}</p>}
+          <h1 className="ev-text text-3xl font-bold">{event.title}</h1>
+          {event.motto && <p className="ev-text-soft mt-1">{event.motto}</p>}
         </header>
 
         {event.status === "active" ? (
@@ -58,10 +58,10 @@ export default async function GuestUploadPage({
             preModeration={event.moderationMode === "pre"}
           />
         ) : (
-          <div className="rounded-2xl bg-white/10 p-8 text-center text-white">
+          <div className="ev-card rounded-2xl p-8 text-center">
             <p className="text-4xl">🎉</p>
-            <p className="mt-3 font-semibold">Dieses Event ist beendet.</p>
-            <p className="mt-1 text-sm text-white/70">
+            <p className="ev-text mt-3 font-semibold">Dieses Event ist beendet.</p>
+            <p className="ev-text-soft mt-1 text-sm">
               Es können keine Beiträge mehr eingereicht werden – danke fürs Mitmachen!
             </p>
           </div>
@@ -70,16 +70,16 @@ export default async function GuestUploadPage({
         <div className="mt-4 text-center">
           <Link
             href={`/e/${event.token}/stream`}
-            className="text-sm text-white/60 underline hover:text-white"
+            className="ev-text-soft text-sm underline"
           >
             Alle Beiträge ansehen →
           </Link>
         </div>
 
-        <footer className="mt-8 text-center text-xs text-white/40">
-          <Link href="/impressum" className="hover:text-white/70">Impressum</Link>
+        <footer className="ev-text-faint mt-8 text-center text-xs">
+          <Link href="/impressum" className="underline">Impressum</Link>
           {" · "}
-          <Link href="/datenschutz" className="hover:text-white/70">Datenschutz</Link>
+          <Link href="/datenschutz" className="underline">Datenschutz</Link>
         </footer>
       </div>
     </main>
