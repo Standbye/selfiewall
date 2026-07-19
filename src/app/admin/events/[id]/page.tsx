@@ -188,6 +188,7 @@ export default async function EventDetailPage({
             moderationMode: event.moderationMode,
             displaySeconds: event.displaySeconds,
             fontFamily: event.fontFamily,
+            wallStyle: event.wallStyle,
             bgDim: event.bgDim,
             customCssUpload: event.customCssUpload,
             customCssWall: event.customCssWall,

@@ -26,6 +26,7 @@ export default async function WallPage({
       {customCss && <style dangerouslySetInnerHTML={{ __html: customCss }} />}
       <Wall
         token={event.token}
+        wallStyle={event.wallStyle}
         title={event.title}
         motto={event.motto}
         primaryColor={event.primaryColor}

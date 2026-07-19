@@ -92,6 +92,7 @@ model Event {
   customCssUpload String?
   customCssWall   String?
   customCssStream String?
+  wallStyle       String    @default("grid-live") // grid-live | calm | blur | mosaic | filmstrip
   moderationMode  String    @default("pre") // "pre" | "post"
   displaySeconds  Int       @default(8)
   status          String    @default("active") // "active" | "closed"

@@ -12,6 +12,7 @@ import { applyModeration, type ModerationAction } from "@/lib/moderation";
 import { FONT_OPTIONS } from "@/lib/fonts";
 
 const FONT_KEYS = FONT_OPTIONS.map((f) => f.key as string);
+const WALL_STYLES = ["grid-live", "calm", "blur", "mosaic", "filmstrip"];
 
 function isColor(value: string) {
   return /^#[0-9a-fA-F]{6}$/.test(value);
@@ -26,6 +27,8 @@ function eventFields(formData: FormData) {
   const moderationMode = formData.get("moderationMode") === "post" ? "post" : "pre";
   const fontRaw = (formData.get("fontFamily") as string | null) ?? "geist";
   const fontFamily = FONT_KEYS.includes(fontRaw) ? fontRaw : "geist";
+  const wallRaw = (formData.get("wallStyle") as string | null) ?? "grid-live";
+  const wallStyle = WALL_STYLES.includes(wallRaw) ? wallRaw : "grid-live";
   const displaySeconds = Math.min(
     60,
     Math.max(3, parseInt((formData.get("displaySeconds") as string | null) ?? "8", 10) || 8)
@@ -55,6 +58,7 @@ function eventFields(formData: FormData) {
     moderationMode,
     displaySeconds,
     fontFamily,
+    wallStyle,
     bgDim,
     customCssUpload: css("customCssUpload"),
     customCssWall: css("customCssWall"),

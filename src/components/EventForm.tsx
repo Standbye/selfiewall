@@ -1,5 +1,13 @@
 import { FONT_OPTIONS } from "@/lib/fonts";
 
+const WALL_STYLE_OPTIONS = [
+  { key: "grid-live", label: "Lebendiges Grid – Bilderkacheln, neue klappen sichtbar ein" },
+  { key: "calm", label: "Ruhig – nur Farbe/Hintergrundbild, kein Grid" },
+  { key: "blur", label: "Blur-Bühne – aktuelles Foto unscharf als Hintergrund" },
+  { key: "mosaic", label: "Mosaik – alle Bilder voll sichtbar, Polaroid klein" },
+  { key: "filmstrip", label: "Filmstreifen – neueste Beiträge als Band am unteren Rand" },
+];
+
 type EventFormValues = {
   title?: string;
   motto?: string | null;
@@ -10,6 +18,7 @@ type EventFormValues = {
   moderationMode?: string;
   displaySeconds?: number;
   fontFamily?: string;
+  wallStyle?: string;
   bgDim?: number;
   customCssUpload?: string | null;
   customCssWall?: string | null;
@@ -76,6 +85,15 @@ export function EventForm({
               <label className={label} htmlFor="polaroidColor">Polaroid-Rahmen</label>
               <input id="polaroidColor" name="polaroidColor" type="color" defaultValue={values.polaroidColor ?? "#ffffff"} className="h-10 w-full cursor-pointer rounded-lg border border-zinc-300" />
             </div>
+          </div>
+
+          <div>
+            <label className={label} htmlFor="wallStyle">Wall-Hintergrund</label>
+            <select id="wallStyle" name="wallStyle" defaultValue={values.wallStyle ?? "grid-live"} className={input}>
+              {WALL_STYLE_OPTIONS.map((s) => (
+                <option key={s.key} value={s.key}>{s.label}</option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
