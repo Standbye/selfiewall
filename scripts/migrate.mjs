@@ -13,6 +13,10 @@ fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
 const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
+// WICHTIG: better-sqlite3 erzwingt Fremdschlüssel per Default. Während
+// Prisma-Migrationen (Tabellen-Neuaufbau mit DROP TABLE) würde das die
+// abhängigen Zeilen per CASCADE löschen — daher für die Migration abschalten.
+db.pragma("foreign_keys = OFF");
 db.exec(
   "CREATE TABLE IF NOT EXISTS _migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)"
 );
@@ -42,5 +46,11 @@ for (const name of fs.readdirSync(migrationsDir).sort()) {
   }
 }
 
+db.pragma("foreign_keys = ON");
+const violations = db.pragma("foreign_key_check");
+if (violations.length > 0) {
+  console.error("[migrate] FOREIGN KEY VIOLATIONS:", violations);
+  process.exit(1);
+}
 db.close();
 console.log("[migrate] database is up to date");
