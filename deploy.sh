@@ -5,6 +5,10 @@ set -euo pipefail
 
 SERVER="root@178.104.197.29"
 TARGET="/opt/selfiewall"
+BACKUP_DIR="/opt/selfiewall-backups"
+
+echo "==> Backup der Produktionsdaten (nach $BACKUP_DIR, außerhalb des Sync-Ziels)"
+ssh "$SERVER" "mkdir -p $BACKUP_DIR && cp -r $TARGET/data $BACKUP_DIR/data-\$(date +%Y%m%d-%H%M%S) && ls -dt $BACKUP_DIR/data-* | tail -n +11 | xargs -r rm -rf"
 
 echo "==> Sync nach $SERVER:$TARGET"
 rsync -az --delete \
