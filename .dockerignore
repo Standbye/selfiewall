@@ -1,0 +1,12 @@
+node_modules
+.next
+data
+.git
+.env
+.claude
+.dockerignore
+Dockerfile
+docker-compose.yml
+README.md
+scripts/dev-upload-test.mjs
+src/generated

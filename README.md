@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📸 Selfiewall
 
-## Getting Started
+Live-Fotowand für Veranstaltungen: Gäste laden per Smartphone Fotos hoch, die auf
+einem Beamer/TV als rotierende Polaroids vor einem Grid aller Bilder angezeigt
+werden. Multimandantenfähig – mehrere Veranstalter, mehrere Events, jedes mit
+eigener nicht ratbarer URL, eigenem Theming und QR-Code.
 
-First, run the development server:
+## Features
+
+- **Gäste-Upload** (mobil): Kamera oder Galerie, optional Name + Grußtext,
+  Einverständnis-Checkbox, clientseitige Bildkompression
+- **Moderation** pro Event umschaltbar: Pre-Moderation (erst freigeben) oder
+  Post-Moderation (sofort sichtbar); mobiltaugliche Moderationsansicht
+- **Wall**: Vollbild, Hintergrund-Grid + Polaroid-Vordergrund, Live-Updates per
+  SSE (neue Bilder werden bevorzugt gezeigt), einstellbare Anzeigedauer,
+  QR-Code-Einblendung
+- **Spam-Schutz**: max. 10 Uploads pro 30 Minuten pro Gerät/IP
+- **Datenschutz**: EXIF-Daten werden serverseitig entfernt, Consent beim Upload,
+  Impressum/Datenschutz-Seiten (Platzhalter → vor Produktivbetrieb ausfüllen!)
+- **Event-Abschluss**: Upload sperren, alle freigegebenen Bilder als ZIP laden
+
+## Deployment (Docker)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Image bauen
+docker compose build
+
+# Secret erzeugen und starten
+BETTER_AUTH_SECRET=$(openssl rand -base64 32) \
+BASE_URL=https://selfiewall.example.de \
+docker compose up -d
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Beim ersten Aufruf der Seite wird der erste Admin-Account angelegt (Setup-Seite).
+Danach ist die Registrierung gesperrt, solange `ALLOW_REGISTRATION` nicht auf
+`true` steht.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Umgebungsvariablen
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Pflicht | Beschreibung |
+|---|---|---|
+| `BETTER_AUTH_SECRET` | ja | Langer zufälliger String (Session-Signierung) |
+| `BASE_URL` | ja | Öffentliche URL, z. B. `https://selfiewall.example.de` – wird für QR-Codes und Auth verwendet |
+| `ALLOW_REGISTRATION` | nein | `true` = weitere Veranstalter-Accounts können sich registrieren (Default: aus) |
 
-## Learn More
+### Daten & Backup
 
-To learn more about Next.js, take a look at the following resources:
+Alles Persistente liegt im Volume `/data` (`./data` auf dem Host):
+`db.sqlite` (Datenbank) und `uploads/<eventId>/…` (Bilder).
+**Backup = dieses eine Verzeichnis sichern.** Migrationen laufen automatisch beim
+Containerstart.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Reverse Proxy
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Der Container spricht HTTP auf Port 3000. HTTPS macht der vorhandene Reverse
+Proxy (nginx/Caddy/Traefik). Wichtig: `X-Forwarded-For` durchreichen, damit das
+Upload-Rate-Limit echte Client-IPs sieht.
 
-## Deploy on Vercel
+## Entwicklung
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm install
+npx prisma migrate dev   # legt data/db.sqlite an
+npm run dev
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`.env` enthält Dev-Defaults. Testuploads: `node scripts/dev-upload-test.mjs <event-token>`.
+
+## Vor dem ersten echten Einsatz
+
+- [ ] `src/app/impressum/page.tsx` und `src/app/datenschutz/page.tsx` mit echten
+      Betreiberdaten füllen (aktuell Platzhalter)
+- [ ] `BASE_URL` korrekt setzen, sonst zeigen QR-Codes auf localhost
