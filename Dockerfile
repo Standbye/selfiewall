@@ -15,6 +15,7 @@ RUN npx prisma generate && npm run build
 
 # ---- Laufzeit ----
 FROM node:22-alpine AS runner
+RUN apk add --no-cache su-exec
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
@@ -30,8 +31,9 @@ COPY --from=builder /app/prisma/migrations ./prisma/migrations
 COPY --from=builder /app/scripts/migrate.mjs ./scripts/migrate.mjs
 COPY docker/entrypoint.sh ./entrypoint.sh
 
+# Kein USER-Statement: Der Entrypoint startet als root, setzt die
+# Volume-Ownership und wechselt dann selbst per su-exec zu "node".
 RUN chmod +x entrypoint.sh && mkdir -p /data && chown -R node:node /data /app
-USER node
 
 EXPOSE 3000
 VOLUME /data
