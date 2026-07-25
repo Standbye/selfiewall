@@ -7,8 +7,30 @@ import { isLightColor } from "./color";
  * Die Textfarben passen sich der Helligkeit des Event-Hintergrunds an —
  * weiße Schrift auf weißem Hintergrund war V2s peinlichster Bug.
  */
+/** true = dunkle Schrift auf hellem Grund (nach Auto-Logik bzw. Override). */
+export function eventUsesDarkText(event: Event): boolean {
+  return event.textColor === "dark"
+    ? true
+    : event.textColor === "light"
+      ? false
+      : isLightColor(event.bgColor);
+}
+
+/** Transparenter Backdrop hinter Titel/Motto, wenn im Event aktiviert. */
+export function titleBackdropStyle(event: Event): React.CSSProperties | undefined {
+  if (!event.titleBackdrop) return undefined;
+  const darkText = eventUsesDarkText(event);
+  return {
+    backgroundColor: darkText ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.4)",
+    backdropFilter: "blur(6px)",
+    WebkitBackdropFilter: "blur(6px)",
+  };
+}
+
 export function eventStyle(event: Event): React.CSSProperties {
-  const light = isLightColor(event.bgColor);
+  // "auto" wählt nach Hintergrund-Helligkeit; "light"/"dark" erzwingen helle
+  // bzw. dunkle Schrift.
+  const light = eventUsesDarkText(event);
   return {
     backgroundColor: event.bgColor,
     fontFamily: fontCss(event.fontFamily),

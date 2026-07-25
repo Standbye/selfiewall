@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { StreamFeed } from "@/components/StreamFeed";
-import { eventStyle, sanitizeCustomCss } from "@/lib/theme";
+import { eventStyle, sanitizeCustomCss, titleBackdropStyle } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
 
@@ -21,14 +21,19 @@ export default async function StreamPage({
     <main className="flex flex-1 flex-col items-center px-4 py-6" style={eventStyle(event)}>
       {customCss && <style dangerouslySetInnerHTML={{ __html: customCss }} />}
       <div className="w-full max-w-lg">
-        <header className="mb-6 flex items-center justify-center gap-3 text-center">
-          {event.logoPath && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={`/api/img/logo-${event.id}`} alt="" className="max-h-12" />
-          )}
-          <div>
-            <h1 className="ev-text text-2xl font-bold">{event.title}</h1>
-            {event.motto && <p className="ev-text-soft text-sm">{event.motto}</p>}
+        <header className="mb-6 flex justify-center">
+          <div
+            className={`flex items-center gap-3 text-center ${event.titleBackdrop ? "rounded-2xl px-5 py-2" : ""}`}
+            style={titleBackdropStyle(event)}
+          >
+            {event.logoPath && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={`/api/img/logo-${event.id}`} alt="" className="max-h-12" />
+            )}
+            <div>
+              <h1 className="ev-text text-2xl font-bold">{event.title}</h1>
+              {event.motto && <p className="ev-text-soft text-sm">{event.motto}</p>}
+            </div>
           </div>
         </header>
 

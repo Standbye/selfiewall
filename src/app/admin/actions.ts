@@ -29,6 +29,9 @@ function eventFields(formData: FormData) {
   const fontFamily = FONT_KEYS.includes(fontRaw) ? fontRaw : "geist";
   const wallRaw = (formData.get("wallStyle") as string | null) ?? "grid-live";
   const wallStyle = WALL_STYLES.includes(wallRaw) ? wallRaw : "grid-live";
+  const textRaw = (formData.get("textColor") as string | null) ?? "auto";
+  const textColor = ["auto", "light", "dark"].includes(textRaw) ? textRaw : "auto";
+  const titleBackdrop = formData.get("titleBackdrop") === "on";
   const displaySeconds = Math.min(
     60,
     Math.max(3, parseInt((formData.get("displaySeconds") as string | null) ?? "8", 10) || 8)
@@ -59,6 +62,8 @@ function eventFields(formData: FormData) {
     displaySeconds,
     fontFamily,
     wallStyle,
+    textColor,
+    titleBackdrop,
     bgDim,
     customCssUpload: css("customCssUpload"),
     customCssWall: css("customCssWall"),

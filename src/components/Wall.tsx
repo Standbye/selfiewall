@@ -25,6 +25,8 @@ function hashStr(s: string) {
 export function Wall({
   token,
   wallStyle,
+  textColor,
+  titleBackdrop,
   title,
   motto,
   primaryColor,
@@ -40,6 +42,8 @@ export function Wall({
 }: {
   token: string;
   wallStyle: string;
+  textColor: string;
+  titleBackdrop: boolean;
   title: string;
   motto: string | null;
   primaryColor: string;
@@ -224,10 +228,20 @@ export function Wall({
     [photos, wallStyle]
   );
 
-  const lightBg = !bgImageUrl && wallStyle !== "mosaic" && isLightColor(bgColor);
+  const autoLightBg = !bgImageUrl && wallStyle !== "mosaic" && isLightColor(bgColor);
+  const lightBg =
+    textColor === "dark" ? true : textColor === "light" ? false : autoLightBg;
   const fg = lightBg ? "#1c1c1a" : "#ffffff";
   const fgSoft = lightBg ? "rgba(20,20,18,0.65)" : "rgba(255,255,255,0.7)";
   const titleShadow = lightBg ? "none" : "0 2px 12px rgba(0,0,0,0.6)";
+  // Transparenter Backdrop hinter Titel/Motto (Peters Lesbarkeits-Wunsch)
+  const backdropStyle: React.CSSProperties | undefined = titleBackdrop
+    ? {
+        backgroundColor: lightBg ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.4)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+      }
+    : undefined;
 
   const polaroidStyle: React.CSSProperties = {
     backgroundColor: polaroidColor,
@@ -364,18 +378,29 @@ export function Wall({
       )}
 
       {/* Titel */}
-      <div className="absolute left-0 right-0 top-6 z-10 text-center">
-        <h1
-          className="text-3xl font-bold"
-          style={{ color: mosaic ? "#fff" : fg, textShadow: mosaic ? "0 2px 12px rgba(0,0,0,0.7)" : titleShadow }}
+      <div className="absolute left-0 right-0 top-6 z-10 flex justify-center">
+        <div
+          className={titleBackdrop ? "rounded-2xl px-6 py-2.5 text-center" : "text-center"}
+          style={backdropStyle}
         >
-          {title}
-        </h1>
-        {motto && (
-          <p className="mt-1" style={{ color: mosaic ? "rgba(255,255,255,0.75)" : fgSoft }}>
-            {motto}
-          </p>
-        )}
+          <h1
+            className="text-3xl font-bold"
+            style={{
+              color: mosaic && !titleBackdrop ? "#fff" : fg,
+              textShadow: titleBackdrop ? "none" : mosaic ? "0 2px 12px rgba(0,0,0,0.7)" : titleShadow,
+            }}
+          >
+            {title}
+          </h1>
+          {motto && (
+            <p
+              className="mt-1"
+              style={{ color: mosaic && !titleBackdrop ? "rgba(255,255,255,0.75)" : fgSoft }}
+            >
+              {motto}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Vordergrund: Polaroid (zentriert; beim Mosaik klein in der Ecke) */}

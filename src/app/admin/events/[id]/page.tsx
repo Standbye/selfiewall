@@ -177,6 +177,7 @@ export default async function EventDetailPage({
       <div className="rounded-2xl bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-zinc-900">Einstellungen</h2>
         <EventForm
+          key={event.updatedAt.getTime()}
           action={updateEvent.bind(null, event.id)}
           values={{
             title: event.title,
@@ -189,6 +190,8 @@ export default async function EventDetailPage({
             displaySeconds: event.displaySeconds,
             fontFamily: event.fontFamily,
             wallStyle: event.wallStyle,
+            textColor: event.textColor,
+            titleBackdrop: event.titleBackdrop,
             bgDim: event.bgDim,
             customCssUpload: event.customCssUpload,
             customCssWall: event.customCssWall,

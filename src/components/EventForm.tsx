@@ -19,6 +19,8 @@ type EventFormValues = {
   displaySeconds?: number;
   fontFamily?: string;
   wallStyle?: string;
+  textColor?: string;
+  titleBackdrop?: boolean;
   bgDim?: number;
   customCssUpload?: string | null;
   customCssWall?: string | null;
@@ -94,6 +96,28 @@ export function EventForm({
                 <option key={s.key} value={s.key}>{s.label}</option>
               ))}
             </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={label} htmlFor="textColor">Schriftfarbe</label>
+              <select id="textColor" name="textColor" defaultValue={values.textColor ?? "auto"} className={input}>
+                <option value="auto">Automatisch (nach Hintergrund)</option>
+                <option value="light">Hell (weiß)</option>
+                <option value="dark">Dunkel (schwarz)</option>
+              </select>
+            </div>
+            <div className="flex items-end pb-2.5">
+              <label className="flex items-center gap-2 text-sm text-zinc-700">
+                <input
+                  type="checkbox"
+                  name="titleBackdrop"
+                  defaultChecked={values.titleBackdrop ?? false}
+                  className="h-4 w-4"
+                />
+                Titel/Motto mit transparentem Hintergrund abheben
+              </label>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

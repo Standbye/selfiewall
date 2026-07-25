@@ -27,6 +27,8 @@ export default async function WallPage({
       <Wall
         token={event.token}
         wallStyle={event.wallStyle}
+        textColor={event.textColor}
+        titleBackdrop={event.titleBackdrop}
         title={event.title}
         motto={event.motto}
         primaryColor={event.primaryColor}

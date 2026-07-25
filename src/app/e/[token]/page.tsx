@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { UploadForm } from "@/components/UploadForm";
-import { eventStyle, sanitizeCustomCss } from "@/lib/theme";
+import { eventStyle, sanitizeCustomCss, titleBackdropStyle } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +38,7 @@ export default async function GuestUploadPage({
         </>
       )}
       <div className="relative z-10 w-full max-w-md">
-        <header className="mb-6 text-center">
+        <header className="mb-6 flex flex-col items-center text-center">
           {event.logoPath && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -47,8 +47,13 @@ export default async function GuestUploadPage({
               className="mx-auto mb-3 max-h-20"
             />
           )}
-          <h1 className="ev-text text-3xl font-bold">{event.title}</h1>
-          {event.motto && <p className="ev-text-soft mt-1">{event.motto}</p>}
+          <div
+            className={event.titleBackdrop ? "rounded-2xl px-6 py-2.5" : undefined}
+            style={titleBackdropStyle(event)}
+          >
+            <h1 className="ev-text text-3xl font-bold">{event.title}</h1>
+            {event.motto && <p className="ev-text-soft mt-1">{event.motto}</p>}
+          </div>
         </header>
 
         {event.status === "active" ? (
