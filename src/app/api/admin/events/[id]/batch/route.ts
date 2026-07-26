@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureEventDir, photoPath } from "@/lib/storage";
 import { emitPhotoApproved } from "@/lib/bus";
+import { MAX_INPUT_PIXELS } from "@/lib/images";
 
 const MAX_FILES = 50;
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
@@ -49,7 +50,10 @@ export async function POST(
     }
     try {
       const input = Buffer.from(await file.arrayBuffer());
-      const base = sharp(input, { failOn: "error" }).rotate();
+      const base = sharp(input, {
+        failOn: "error",
+        limitInputPixels: MAX_INPUT_PIXELS,
+      }).rotate();
       const fullBuffer = await base
         .clone()
         .resize(1920, 1920, { fit: "inside", withoutEnlargement: true })

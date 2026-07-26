@@ -60,7 +60,7 @@ export function Wall({
   const [photos, setPhotos] = useState<WallPhoto[]>([]);
   const [current, setCurrent] = useState<WallPhoto | null>(null);
   const [tilt, setTilt] = useState(0);
-  const [tiles, setTiles] = useState<Tile[]>([]);
+  const [planted, setPlanted] = useState<Map<number, Tile>>(new Map());
   const photosRef = useRef<WallPhoto[]>([]);
   const currentRef = useRef<WallPhoto | null>(null);
   const priorityQueue = useRef<WallPhoto[]>([]);
@@ -104,12 +104,11 @@ export function Wall({
 
   /** Neue Bilder sichtbar ins Kachel-Grid einklappen. */
   const plantTiles = useCallback((photoId: string, count: number) => {
-    setTiles((prev) => {
-      if (prev.length === 0) return prev;
-      const next = [...prev];
+    setPlanted((prev) => {
+      const next = new Map(prev);
       for (let i = 0; i < count; i++) {
-        const slot = Math.floor(Math.random() * next.length);
-        next[slot] = { id: photoId, seq: seqRef.current++ };
+        const slot = Math.floor(Math.random() * TILE_COUNT);
+        next.set(slot, { id: photoId, seq: seqRef.current++ });
       }
       return next;
     });
@@ -136,40 +135,32 @@ export function Wall({
     };
   }, [token]);
 
-  // Grid initial befüllen (deterministisch, damit es nicht flackert)
-  useEffect(() => {
-    if (!hasGrid) return;
+  /**
+   * Kachel-Grid: deterministische Grundfüllung aus den vorhandenen Bildern,
+   * darüber die per SSE "eingepflanzten" Neuzugänge. Beides wird beim Rendern
+   * zusammengeführt — kein Zustand, der dem Bilderstrom hinterherlaufen muss.
+   */
+  const tiles = useMemo<Tile[]>(() => {
+    if (!hasGrid) return [];
     const imagePhotos = photos.filter((p) => p.type === "photo");
-    if (imagePhotos.length === 0) {
-      if (tiles.length > 0) setTiles([]);
-      return;
-    }
-    if (tiles.length === 0) {
-      const shuffled = [...imagePhotos].sort((a, b) => hashStr(a.id) - hashStr(b.id));
-      const filled: Tile[] = [];
-      while (filled.length < TILE_COUNT) {
-        for (const p of shuffled) {
-          filled.push({ id: p.id, seq: 0 });
-          if (filled.length >= TILE_COUNT) break;
-        }
+    if (imagePhotos.length === 0) return [];
+
+    const shuffled = [...imagePhotos].sort((a, b) => hashStr(a.id) - hashStr(b.id));
+    const base: Tile[] = [];
+    while (base.length < TILE_COUNT) {
+      for (const p of shuffled) {
+        base.push({ id: p.id, seq: 0 });
+        if (base.length >= TILE_COUNT) break;
       }
-      setTiles(filled);
     }
-    // Entfernte Bilder aus dem Grid ersetzen
+
     const validIds = new Set(imagePhotos.map((p) => p.id));
-    if (tiles.some((t) => !validIds.has(t.id))) {
-      setTiles((prev) =>
-        prev.map((t) =>
-          validIds.has(t.id)
-            ? t
-            : {
-                id: imagePhotos[Math.floor(Math.random() * imagePhotos.length)].id,
-                seq: seqRef.current++,
-              }
-        )
-      );
+    for (const [slot, tile] of planted) {
+      // Gelöschte Bilder fallen auf die Grundfüllung zurück
+      if (slot < base.length && validIds.has(tile.id)) base[slot] = tile;
     }
-  }, [photos, hasGrid, tiles]);
+    return base;
+  }, [photos, planted, hasGrid]);
 
   // Grid "atmet": alle 20 Sekunden ein paar Kacheln tauschen
   useEffect(() => {

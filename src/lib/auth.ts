@@ -4,12 +4,30 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import { admin } from "better-auth/plugins";
 import { prisma } from "./prisma";
 
+const baseURL = process.env.BASE_URL ?? "http://localhost:3000";
+const useSecureCookies = baseURL.startsWith("https://");
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "sqlite" }),
   secret: process.env.BETTER_AUTH_SECRET,
-  baseURL: process.env.BASE_URL ?? "http://localhost:3000",
+  baseURL,
   emailAndPassword: {
     enabled: true,
+  },
+  advanced: {
+    useSecureCookies,
+  },
+  // Brute-Force-Bremse: better-auth limitiert pro IP. nginx begrenzt
+  // zusätzlich auf Proxy-Ebene.
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 60,
+    storage: "memory",
+    customRules: {
+      "/sign-in/email": { window: 300, max: 10 },
+      "/sign-up/email": { window: 3600, max: 5 },
+    },
   },
   plugins: [
     admin(), // Superadmin-Rolle "admin", Nutzerverwaltung über /admin/users

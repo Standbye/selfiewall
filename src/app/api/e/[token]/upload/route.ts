@@ -5,10 +5,19 @@ import fs from "node:fs/promises";
 import { prisma } from "@/lib/prisma";
 import { ensureEventDir, photoPath } from "@/lib/storage";
 import { emitPhotoApproved } from "@/lib/bus";
+import { clientIp } from "@/lib/rate-limit";
+import { guestCookieOptions } from "@/lib/cookies";
+import { MAX_INPUT_PIXELS } from "@/lib/images";
 
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
-const RATE_LIMIT_COUNT = 10;
 const RATE_LIMIT_WINDOW_MS = 30 * 60 * 1000;
+/** Pro Gerät: der eigentliche Spam-Schutz. */
+const DEVICE_LIMIT = 10;
+/**
+ * Pro IP nur als Flut-Bremse — bewusst hoch: Auf einer Feier hängen alle
+ * Gäste am selben WLAN bzw. Mobilfunk-NAT und teilen sich eine IP.
+ */
+const IP_LIMIT = 300;
 const UPLOADER_COOKIE = "sw_uploader";
 
 export async function POST(
@@ -50,28 +59,31 @@ export async function POST(
     }
   }
 
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    req.headers.get("x-real-ip") ??
-    null;
+  const ip = clientIp(req);
   let uploaderKey = req.cookies.get(UPLOADER_COOKIE)?.value;
   const isNewUploader = !uploaderKey;
   if (!uploaderKey) uploaderKey = crypto.randomUUID();
 
-  // Rate-Limit: max. 10 Beiträge pro 30 Minuten pro Gerät bzw. IP
   const since = new Date(Date.now() - RATE_LIMIT_WINDOW_MS);
-  const recent = await prisma.photo.count({
-    where: {
-      eventId: event.id,
-      createdAt: { gte: since },
-      OR: [{ uploaderKey }, ...(ip ? [{ ip }] : [])],
-    },
+  const deviceCount = await prisma.photo.count({
+    where: { eventId: event.id, createdAt: { gte: since }, uploaderKey },
   });
-  if (recent >= RATE_LIMIT_COUNT) {
+  if (deviceCount >= DEVICE_LIMIT) {
     return NextResponse.json(
       { error: "Du hast gerade viele Beiträge geschickt – warte bitte ein paar Minuten." },
       { status: 429 }
     );
+  }
+  if (ip) {
+    const ipCount = await prisma.photo.count({
+      where: { eventId: event.id, createdAt: { gte: since }, ip },
+    });
+    if (ipCount >= IP_LIMIT) {
+      return NextResponse.json(
+        { error: "Gerade kommen sehr viele Beiträge herein – bitte kurz warten." },
+        { status: 429 }
+      );
+    }
   }
 
   // Bei Bildern: serverseitig immer neu kodieren (Orientierung, EXIF-Entfernung,
@@ -81,7 +93,10 @@ export async function POST(
   if (type === "photo") {
     try {
       const input = Buffer.from(await (file as File).arrayBuffer());
-      const base = sharp(input, { failOn: "error" }).rotate();
+      const base = sharp(input, {
+        failOn: "error",
+        limitInputPixels: MAX_INPUT_PIXELS,
+      }).rotate();
       fullBuffer = await base
         .clone()
         .resize(1920, 1920, { fit: "inside", withoutEnlargement: true })
@@ -133,12 +148,7 @@ export async function POST(
 
   const res = NextResponse.json({ id: photo.id, status });
   if (isNewUploader) {
-    res.cookies.set(UPLOADER_COOKIE, uploaderKey, {
-      httpOnly: true,
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7,
-      path: "/",
-    });
+    res.cookies.set(UPLOADER_COOKIE, uploaderKey, guestCookieOptions());
   }
   return res;
 }

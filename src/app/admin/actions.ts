@@ -10,6 +10,7 @@ import { generateEventToken } from "@/lib/token";
 import { ensureEventDir, logoPath, bgImagePath, deleteEventDir } from "@/lib/storage";
 import { applyModeration, type ModerationAction } from "@/lib/moderation";
 import { FONT_OPTIONS } from "@/lib/fonts";
+import { MAX_INPUT_PIXELS } from "@/lib/images";
 
 const FONT_KEYS = FONT_OPTIONS.map((f) => f.key as string);
 const WALL_STYLES = ["grid-live", "calm", "blur", "mosaic", "filmstrip"];
@@ -75,7 +76,9 @@ async function saveLogo(eventId: string, formData: FormData): Promise<boolean> {
   const logo = formData.get("logo");
   if (!(logo instanceof File) || logo.size === 0) return false;
   if (logo.size > 5 * 1024 * 1024) throw new Error("Logo zu groß (max. 5 MB)");
-  const buf = await sharp(Buffer.from(await logo.arrayBuffer()))
+  const buf = await sharp(Buffer.from(await logo.arrayBuffer()), {
+    limitInputPixels: MAX_INPUT_PIXELS,
+  })
     .resize(512, 512, { fit: "inside", withoutEnlargement: true })
     .png()
     .toBuffer();
@@ -88,7 +91,9 @@ async function saveBgImage(eventId: string, formData: FormData): Promise<boolean
   const bg = formData.get("bgImage");
   if (!(bg instanceof File) || bg.size === 0) return false;
   if (bg.size > 10 * 1024 * 1024) throw new Error("Hintergrundbild zu groß (max. 10 MB)");
-  const buf = await sharp(Buffer.from(await bg.arrayBuffer()))
+  const buf = await sharp(Buffer.from(await bg.arrayBuffer()), {
+    limitInputPixels: MAX_INPUT_PIXELS,
+  })
     .rotate()
     .resize(2560, 2560, { fit: "inside", withoutEnlargement: true })
     .jpeg({ quality: 82 })

@@ -1,5 +1,8 @@
 export const metadata = { title: "Impressum – Selfiewall" };
 
+// Dynamisch, damit der CSP-Nonce pro Anfrage passt (siehe src/proxy.ts)
+export const dynamic = "force-dynamic";
+
 export default function ImpressumPage() {
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10">

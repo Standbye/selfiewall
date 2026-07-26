@@ -41,14 +41,17 @@ export function UploadForm({
   // Einwilligung wird pro Gerät gemerkt — die Checkbox erscheint nur beim
   // ersten Beitrag, danach reicht der Hinweistext.
   useEffect(() => {
-    try {
-      if (localStorage.getItem(CONSENT_KEY) === "true") {
-        setConsent(true);
-        setConsentStored(true);
+    const t = setTimeout(() => {
+      try {
+        if (localStorage.getItem(CONSENT_KEY) === "true") {
+          setConsent(true);
+          setConsentStored(true);
+        }
+      } catch {
+        // localStorage gesperrt → Checkbox bleibt sichtbar
       }
-    } catch {
-      // localStorage gesperrt → Checkbox bleibt sichtbar
-    }
+    }, 0);
+    return () => clearTimeout(t);
   }, []);
 
   function pickFile(picked: File | Blob | null, alreadyCompressed = false) {
