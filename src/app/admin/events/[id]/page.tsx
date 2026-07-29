@@ -8,7 +8,10 @@ import {
   deleteEvent,
   regenerateModerationLink,
   revokeModerationLink,
+  regenerateGalleryLink,
+  sendGalleryLinkNow,
 } from "@/app/admin/actions";
+import { mailConfigured } from "@/lib/mail";
 import { EventForm } from "@/components/EventForm";
 import { CopyButton } from "@/components/CopyButton";
 import { ConfirmSubmit } from "@/components/ConfirmSubmit";
@@ -38,17 +41,21 @@ export default async function EventDetailPage({
   const { id } = await params;
   const { event } = await requireOwnedEvent(id);
 
-  const [total, pending, approved] = await Promise.all([
+  const [total, pending, approved, subscribers] = await Promise.all([
     prisma.photo.count({ where: { eventId: event.id } }),
     prisma.photo.count({ where: { eventId: event.id, status: "pending" } }),
     prisma.photo.count({ where: { eventId: event.id, status: "approved" } }),
+    prisma.subscriber.count({ where: { eventId: event.id } }),
   ]);
+  const smtpReady = mailConfigured();
 
   const baseUrl = process.env.BASE_URL ?? "http://localhost:3000";
   const uploadUrl = `${baseUrl}/e/${event.token}`;
   const wallUrl = `${baseUrl}/e/${event.token}/wall`;
   const streamUrl = `${baseUrl}/e/${event.token}/stream`;
   const modUrl = event.moderationToken ? `${baseUrl}/m/${event.moderationToken}` : null;
+  const galleryUrl =
+    event.galleryEnabled && event.galleryToken ? `${baseUrl}/g/${event.galleryToken}` : null;
   const uploadQr = await QRCode.toDataURL(uploadUrl, { width: 400, margin: 2 });
 
   const closed = event.status === "closed";
@@ -166,6 +173,80 @@ export default async function EventDetailPage({
       </div>
 
       <div className="rounded-2xl bg-white p-6 shadow-sm">
+        <h2 className="mb-1 text-lg font-semibold text-zinc-900">
+          Öffentliche Galerie
+          {event.galleryMailedAt && (
+            <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-normal text-emerald-800">
+              Link verschickt
+            </span>
+          )}
+        </h2>
+        <p className="mb-4 text-sm text-zinc-500">
+          Zum Teilen nach der Veranstaltung: Wer den Link hat, kann alle
+          freigegebenen Fotos ansehen und als ZIP herunterladen – ohne Login.
+          Aktivieren lässt sie sich unten in den Einstellungen.
+        </p>
+
+        {galleryUrl ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <a
+                href={galleryUrl}
+                target="_blank"
+                className="truncate rounded-lg bg-zinc-100 px-3 py-1.5 text-sm text-zinc-700"
+              >
+                {galleryUrl}
+              </a>
+              <CopyButton text={galleryUrl} />
+            </div>
+
+            <div className="rounded-xl bg-zinc-50 p-4">
+              <div className="text-sm text-zinc-700">
+                <strong>{subscribers}</strong>{" "}
+                {subscribers === 1 ? "Gast hat" : "Gäste haben"} eine E-Mail-Adresse
+                für den Galerie-Link hinterlassen.
+                {event.emailOnClose && (
+                  <span className="block text-xs text-zinc-500">
+                    Der Link geht beim Beenden des Events automatisch raus.
+                  </span>
+                )}
+              </div>
+              {!smtpReady && (
+                <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  E-Mail-Versand ist auf diesem Server noch nicht eingerichtet –
+                  SMTP-Zugangsdaten fehlen in der .env.
+                </p>
+              )}
+              {subscribers > 0 && smtpReady && (
+                <form action={sendGalleryLinkNow.bind(null, event.id)} className="mt-3">
+                  <ConfirmSubmit
+                    message={`Galerie-Link jetzt an ${subscribers} Adresse(n) verschicken?`}
+                    className="rounded-lg bg-zinc-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700"
+                  >
+                    ✉ Link jetzt verschicken
+                  </ConfirmSubmit>
+                </form>
+              )}
+            </div>
+
+            <form action={regenerateGalleryLink.bind(null, event.id)}>
+              <ConfirmSubmit
+                message="Galerie-Link neu generieren? Der bisherige Link funktioniert dann nicht mehr."
+                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+              >
+                Neuen Link generieren
+              </ConfirmSubmit>
+            </form>
+          </div>
+        ) : (
+          <p className="rounded-xl bg-zinc-50 px-4 py-3 text-sm text-zinc-500">
+            Noch nicht aktiviert – setze unten in den Einstellungen den Haken bei
+            „Öffentliche Galerie bereitstellen“.
+          </p>
+        )}
+      </div>
+
+      <div className="rounded-2xl bg-white p-6 shadow-sm">
         <h2 className="mb-1 text-lg font-semibold text-zinc-900">Batch-Upload</h2>
         <p className="mb-4 text-sm text-zinc-500">
           Eigene Bilder vorab oder nachträglich einspielen – z. B. damit die Wall
@@ -192,6 +273,10 @@ export default async function EventDetailPage({
             wallStyle: event.wallStyle,
             textColor: event.textColor,
             titleBackdrop: event.titleBackdrop,
+            galleryEnabled: event.galleryEnabled,
+            collectEmails: event.collectEmails,
+            emailOnClose: event.emailOnClose,
+            mailConfigured: smtpReady,
             bgDim: event.bgDim,
             customCssUpload: event.customCssUpload,
             customCssWall: event.customCssWall,

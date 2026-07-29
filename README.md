@@ -18,6 +18,10 @@ eigener nicht ratbarer URL, eigenem Theming und QR-Code.
 - **Datenschutz**: EXIF-Daten werden serverseitig entfernt, Consent beim Upload,
   Impressum/Datenschutz-Seiten (Platzhalter → vor Produktivbetrieb ausfüllen!)
 - **Event-Abschluss**: Upload sperren, alle freigegebenen Bilder als ZIP laden
+- **Öffentliche Galerie**: eigener Link zum Ansehen und Herunterladen aller
+  freigegebenen Fotos (ohne Login); Gäste können beim Hochladen freiwillig eine
+  E-Mail-Adresse hinterlassen und bekommen den Link beim Beenden des Events
+  automatisch zugeschickt
 
 ## Deployment (Docker)
 
@@ -41,7 +45,7 @@ Danach ist die Registrierung gesperrt, solange `ALLOW_REGISTRATION` nicht auf
 |---|---|---|
 | `BETTER_AUTH_SECRET` | ja | Langer zufälliger String (Session-Signierung) |
 | `BASE_URL` | ja | Öffentliche URL, z. B. `https://selfiewall.example.de` – wird für QR-Codes und Auth verwendet |
-| `ALLOW_REGISTRATION` | nein | `true` = weitere Veranstalter-Accounts können sich registrieren (Default: aus) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | nein | Für den automatischen Versand des Galerie-Links nach dem Event. Ohne diese Werte bleibt der Mailversand einfach aus, alles andere funktioniert normal. |
 
 ### Daten & Backup
 

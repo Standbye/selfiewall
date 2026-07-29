@@ -19,16 +19,19 @@ export function UploadForm({
   token,
   primaryColor,
   preModeration,
+  collectEmails,
 }: {
   token: string;
   primaryColor: string;
   preModeration: boolean;
+  collectEmails: boolean;
 }) {
   const [mode, setMode] = useState<Mode>("idle");
   const [file, setFile] = useState<File | Blob | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [consent, setConsent] = useState(false);
   const [consentStored, setConsentStored] = useState(false);
@@ -102,6 +105,7 @@ export function UploadForm({
       }
       formData.append("name", name);
       formData.append("message", message);
+      if (collectEmails && email.trim()) formData.append("email", email.trim());
       formData.append("consent", "true");
       const res = await fetch(`/api/e/${token}/upload`, { method: "POST", body: formData });
       const data = await res.json().catch(() => ({}));
@@ -262,6 +266,22 @@ export function UploadForm({
           placeholder="Kurzer Gruß (optional)"
           className="ev-input w-full rounded-xl border-0 px-4 py-3 focus:outline-none"
         />
+      )}
+
+      {collectEmails && (
+        <div>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            maxLength={120}
+            placeholder="E-Mail für die Fotos danach (optional)"
+            className="ev-input w-full rounded-xl border-0 px-4 py-3 focus:outline-none"
+          />
+          <p className="ev-text-faint mt-1 px-1 text-xs">
+            Nur für den Link zur Fotogalerie nach der Veranstaltung – keine Werbung.
+          </p>
+        </div>
       )}
 
       {consentStored ? (

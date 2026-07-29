@@ -99,6 +99,13 @@ model Event {
   moderationMode  String    @default("pre") // "pre" | "post"
   displaySeconds  Int       @default(8)
   status          String    @default("active") // "active" | "closed"
+  // Öffentliche Galerie zum Herunterladen nach dem Event
+  galleryEnabled  Boolean   @default(false)
+  galleryToken    String?   @unique
+  collectEmails   Boolean   @default(false)
+  emailOnClose    Boolean   @default(false)
+  galleryMailedAt DateTime?
+  subscribers     Subscriber[]
   ownerId         String
   owner           User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   photos          Photo[]
@@ -125,6 +132,18 @@ model Photo {
   @@index([eventId, status])
   @@index([eventId, uploaderKey, createdAt])
   @@map("photo")
+}
+
+/** Gäste, die beim Hochladen ihre E-Mail für den Galerie-Link hinterlassen. */
+model Subscriber {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  email     String
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, email])
+  @@map("subscriber")
 }
 
 model Like {

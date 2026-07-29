@@ -16,3 +16,9 @@ services:
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET setzen}
       # Auf "true" setzen, um weitere Veranstalter-Accounts zuzulassen
       - ALLOW_REGISTRATION=${ALLOW_REGISTRATION:-false}
+      # Optional: E-Mail-Versand des Galerie-Links nach dem Event
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - MAIL_FROM=${MAIL_FROM:-}

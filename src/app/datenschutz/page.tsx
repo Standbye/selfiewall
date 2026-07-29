@@ -24,6 +24,15 @@ export default function DatenschutzPage() {
           Hochladen automatisch entfernt.
         </p>
 
+        <h2 className="text-lg font-semibold">E-Mail-Adresse (optional)</h2>
+        <p>
+          Bei manchen Veranstaltungen kannst du beim Hochladen freiwillig eine
+          E-Mail-Adresse angeben. Sie wird ausschließlich dafür verwendet, dir
+          nach der Veranstaltung einmalig den Link zur Fotogalerie zu schicken,
+          und nicht an Dritte weitergegeben. Du kannst ihre Löschung jederzeit
+          beim Veranstalter verlangen.
+        </p>
+
         <h2 className="text-lg font-semibold">Zweck und Rechtsgrundlage</h2>
         <p>
           Die Bilder werden ausschließlich zur Anzeige auf der Fotowand der

@@ -11,6 +11,7 @@ import { ensureEventDir, logoPath, bgImagePath, deleteEventDir } from "@/lib/sto
 import { applyModeration, type ModerationAction } from "@/lib/moderation";
 import { FONT_OPTIONS } from "@/lib/fonts";
 import { MAX_INPUT_PIXELS } from "@/lib/images";
+import { sendGalleryMail } from "@/lib/mail";
 
 const FONT_KEYS = FONT_OPTIONS.map((f) => f.key as string);
 const WALL_STYLES = ["grid-live", "calm", "blur", "mosaic", "filmstrip"];
@@ -33,6 +34,9 @@ function eventFields(formData: FormData) {
   const textRaw = (formData.get("textColor") as string | null) ?? "auto";
   const textColor = ["auto", "light", "dark"].includes(textRaw) ? textRaw : "auto";
   const titleBackdrop = formData.get("titleBackdrop") === "on";
+  const galleryEnabled = formData.get("galleryEnabled") === "on";
+  const collectEmails = formData.get("collectEmails") === "on";
+  const emailOnClose = formData.get("emailOnClose") === "on";
   const displaySeconds = Math.min(
     60,
     Math.max(3, parseInt((formData.get("displaySeconds") as string | null) ?? "8", 10) || 8)
@@ -65,6 +69,9 @@ function eventFields(formData: FormData) {
     wallStyle,
     textColor,
     titleBackdrop,
+    galleryEnabled,
+    collectEmails,
+    emailOnClose,
     bgDim,
     customCssUpload: css("customCssUpload"),
     customCssWall: css("customCssWall"),
@@ -138,6 +145,10 @@ export async function updateEvent(eventId: string, formData: FormData) {
       ...fields,
       ...(logoSaved ? { logoPath: "logo.png" } : {}),
       ...(bgSaved ? { bgImagePath: "background.jpg" } : removeBg ? { bgImagePath: null } : {}),
+      // Beim Aktivieren der Galerie einmalig einen Link erzeugen
+      ...(fields.galleryEnabled && !event.galleryToken
+        ? { galleryToken: generateEventToken() + generateEventToken() }
+        : {}),
     },
   });
   revalidatePath(`/admin/events/${event.id}`);
@@ -145,10 +156,72 @@ export async function updateEvent(eventId: string, formData: FormData) {
 
 export async function setEventStatus(eventId: string, status: "active" | "closed") {
   const { event } = await requireOwnedEvent(eventId);
-  await prisma.event.update({
+  const updated = await prisma.event.update({
     where: { id: event.id },
     data: { status, closedAt: status === "closed" ? new Date() : null },
   });
+
+  // Beim Schließen den Galerie-Link an die eingetragenen Gäste schicken —
+  // einmalig, auch wenn ein Event später erneut geschlossen wird.
+  if (
+    status === "closed" &&
+    updated.emailOnClose &&
+    updated.galleryEnabled &&
+    updated.galleryToken &&
+    !updated.galleryMailedAt
+  ) {
+    const subscribers = await prisma.subscriber.findMany({
+      where: { eventId: event.id },
+      select: { email: true },
+    });
+    const baseUrl = process.env.BASE_URL ?? "http://localhost:3000";
+    const result = await sendGalleryMail({
+      recipients: subscribers.map((s) => s.email),
+      eventTitle: updated.title,
+      galleryUrl: `${baseUrl}/g/${updated.galleryToken}`,
+    });
+    if (result.sent > 0) {
+      await prisma.event.update({
+        where: { id: event.id },
+        data: { galleryMailedAt: new Date() },
+      });
+    }
+  }
+
+  revalidatePath(`/admin/events/${event.id}`);
+}
+
+/** Galerie-Link erzeugen bzw. neu generieren (alter Link verfällt). */
+export async function regenerateGalleryLink(eventId: string) {
+  const { event } = await requireOwnedEvent(eventId);
+  await prisma.event.update({
+    where: { id: event.id },
+    data: { galleryToken: generateEventToken() + generateEventToken() },
+  });
+  revalidatePath(`/admin/events/${event.id}`);
+}
+
+/** Galerie-Link an alle eingetragenen Gäste schicken (manuell ausgelöst). */
+export async function sendGalleryLinkNow(eventId: string) {
+  const { event } = await requireOwnedEvent(eventId);
+  if (!event.galleryToken || !event.galleryEnabled) return;
+
+  const subscribers = await prisma.subscriber.findMany({
+    where: { eventId: event.id },
+    select: { email: true },
+  });
+  const baseUrl = process.env.BASE_URL ?? "http://localhost:3000";
+  const result = await sendGalleryMail({
+    recipients: subscribers.map((s) => s.email),
+    eventTitle: event.title,
+    galleryUrl: `${baseUrl}/g/${event.galleryToken}`,
+  });
+  if (result.sent > 0) {
+    await prisma.event.update({
+      where: { id: event.id },
+      data: { galleryMailedAt: new Date() },
+    });
+  }
   revalidatePath(`/admin/events/${event.id}`);
 }
 

@@ -61,6 +61,7 @@ export default async function GuestUploadPage({
             token={event.token}
             primaryColor={event.primaryColor}
             preModeration={event.moderationMode === "pre"}
+            collectEmails={event.collectEmails}
           />
         ) : (
           <div className="ev-card rounded-2xl p-8 text-center">
@@ -69,6 +70,15 @@ export default async function GuestUploadPage({
             <p className="ev-text-soft mt-1 text-sm">
               Es können keine Beiträge mehr eingereicht werden – danke fürs Mitmachen!
             </p>
+            {event.galleryEnabled && event.galleryToken && (
+              <a
+                href={`/g/${event.galleryToken}`}
+                className="mt-5 inline-block rounded-xl px-5 py-3 font-semibold text-white transition"
+                style={{ backgroundColor: event.primaryColor }}
+              >
+                📷 Alle Fotos ansehen und herunterladen
+              </a>
+            )}
           </div>
         )}
 

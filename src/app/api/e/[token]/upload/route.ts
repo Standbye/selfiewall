@@ -41,6 +41,7 @@ export async function POST(
   const file = formData.get("file");
   const name = (formData.get("name") as string | null)?.trim().slice(0, 50) || null;
   const message = (formData.get("message") as string | null)?.trim().slice(0, 300) || null;
+  const email = (formData.get("email") as string | null)?.trim().slice(0, 120).toLowerCase() || null;
   const consent = formData.get("consent");
 
   if (consent !== "true") {
@@ -133,6 +134,15 @@ export async function POST(
     ensureEventDir(event.id);
     await fs.writeFile(photoPath(event.id, photo.id, "full"), fullBuffer);
     await fs.writeFile(photoPath(event.id, photo.id, "thumb"), thumbBuffer);
+  }
+
+  // Optionale E-Mail für den Galerie-Link merken (pro Event nur einmal)
+  if (email && event.collectEmails && /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(email)) {
+    await prisma.subscriber
+      .create({ data: { eventId: event.id, email } })
+      .catch(() => {
+        // Adresse ist für dieses Event bereits eingetragen
+      });
   }
 
   if (status === "approved") {

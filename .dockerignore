@@ -10,3 +10,4 @@ docker-compose.yml
 README.md
 scripts/dev-upload-test.mjs
 src/generated
+scripts/dev-catch-smtp.mjs

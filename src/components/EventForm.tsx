@@ -21,6 +21,10 @@ type EventFormValues = {
   wallStyle?: string;
   textColor?: string;
   titleBackdrop?: boolean;
+  galleryEnabled?: boolean;
+  collectEmails?: boolean;
+  emailOnClose?: boolean;
+  mailConfigured?: boolean;
   bgDim?: number;
   customCssUpload?: string | null;
   customCssWall?: string | null;
@@ -163,6 +167,61 @@ export function EventForm({
             )}
             <input id="logo" name="logo" type="file" accept="image/*" className={fileInput} />
           </div>
+        </div>
+      </fieldset>
+
+      <fieldset className="rounded-xl border border-zinc-200 p-4">
+        <legend className="px-1 text-sm font-semibold text-zinc-700">
+          Fotos nach dem Event
+        </legend>
+        <div className="space-y-3">
+          <label className="flex items-start gap-2 text-sm text-zinc-700">
+            <input
+              type="checkbox"
+              name="galleryEnabled"
+              defaultChecked={values.galleryEnabled ?? false}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              Öffentliche Galerie bereitstellen
+              <span className="block text-xs text-zinc-500">
+                Eigener Link, über den Gäste alle freigegebenen Fotos ansehen und
+                herunterladen können – ohne Login.
+              </span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-sm text-zinc-700">
+            <input
+              type="checkbox"
+              name="collectEmails"
+              defaultChecked={values.collectEmails ?? false}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              Beim Hochladen nach einer E-Mail-Adresse fragen
+              <span className="block text-xs text-zinc-500">
+                Freiwilliges Feld für Gäste, die den Galerie-Link später
+                zugeschickt bekommen möchten.
+              </span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-sm text-zinc-700">
+            <input
+              type="checkbox"
+              name="emailOnClose"
+              defaultChecked={values.emailOnClose ?? false}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              Galerie-Link beim Beenden des Events automatisch verschicken
+              {values.mailConfigured === false && (
+                <span className="block text-xs text-amber-700">
+                  Achtung: Auf diesem Server ist noch kein E-Mail-Versand
+                  eingerichtet (SMTP-Zugangsdaten in der .env).
+                </span>
+              )}
+            </span>
+          </label>
         </div>
       </fieldset>
 
