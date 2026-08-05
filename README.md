@@ -55,8 +55,6 @@ Reverse Proxy mit HTTPS davor und `BASE_URL` auf die öffentliche Adresse
   ein Moderations-Link für Helfer – ohne Account, jederzeit widerrufbar
 - **Spam-Schutz**: 10 Beiträge pro 30 Minuten pro Gerät (IP-Limit bewusst hoch,
   weil auf Feiern alle Gäste hinter derselben Adresse hängen)
-- **Gehärtet**: strenge Content-Security-Policy mit Nonce, HSTS,
-  Brute-Force-Bremse am Login, Grenzen gegen Dekompressionsbomben
 - **Datenschutz**: EXIF-Daten werden serverseitig entfernt, Consent beim Upload,
   Impressum/Datenschutz-Seiten (Platzhalter → vor Produktivbetrieb ausfüllen!)
 - **Event-Abschluss**: Upload sperren, alle freigegebenen Bilder als ZIP laden
@@ -67,21 +65,11 @@ Reverse Proxy mit HTTPS davor und `BASE_URL` auf die öffentliche Adresse
 
 ## Deployment (Docker)
 
-Bei jedem Push auf `main` baut GitHub Actions das Image und veröffentlicht es
-als `ghcr.io/standbye/selfiewall:latest` sowie unter `sha-<commit>`. Auf dem
-Zielsystem muss also nichts mehr gebaut werden:
-
 ```bash
 # Secret erzeugen und starten
 BETTER_AUTH_SECRET=$(openssl rand -base64 32) \
 BASE_URL=https://selfiewall.example.de \
 docker compose up -d
-```
-
-Eine bestimmte Version ausrollen (z. B. zum Zurückrollen):
-
-```bash
-SELFIEWALL_IMAGE=ghcr.io/standbye/selfiewall:sha-1a2b3c4 docker compose up -d
 ```
 
 Ohne Registry geht es weiterhin lokal: `docker compose up -d --build`.
@@ -112,16 +100,6 @@ Containerstart.
 Der Container spricht HTTP auf Port 3000. HTTPS macht der vorhandene Reverse
 Proxy (nginx/Caddy/Traefik). Wichtig: `X-Forwarded-For` durchreichen, damit das
 Upload-Rate-Limit echte Client-IPs sieht.
-
-## Entwicklung
-
-```bash
-npm install
-npx prisma migrate dev   # legt data/db.sqlite an
-npm run dev
-```
-
-`.env` enthält Dev-Defaults. Testuploads: `node scripts/dev-upload-test.mjs <event-token>`.
 
 ## Vor dem ersten echten Einsatz
 
