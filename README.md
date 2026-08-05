@@ -25,15 +25,26 @@ eigener nicht ratbarer URL, eigenem Theming und QR-Code.
 
 ## Deployment (Docker)
 
-```bash
-# Image bauen
-docker compose build
+Bei jedem Push auf `main` baut GitHub Actions das Image und veröffentlicht es
+als `ghcr.io/standbye/selfiewall:latest` sowie unter `sha-<commit>`. Auf dem
+Zielsystem muss also nichts mehr gebaut werden:
 
+```bash
 # Secret erzeugen und starten
 BETTER_AUTH_SECRET=$(openssl rand -base64 32) \
 BASE_URL=https://selfiewall.example.de \
 docker compose up -d
 ```
+
+Eine bestimmte Version ausrollen (z. B. zum Zurückrollen):
+
+```bash
+SELFIEWALL_IMAGE=ghcr.io/standbye/selfiewall:sha-1a2b3c4 docker compose up -d
+```
+
+Ohne Registry geht es weiterhin lokal: `docker compose up -d --build`.
+Das Image ist für `linux/amd64` gebaut – auf ARM-Systemen (z. B. Raspberry Pi)
+selbst bauen.
 
 Beim ersten Aufruf der Seite wird der erste Admin-Account angelegt (Setup-Seite).
 Danach ist die Registrierung gesperrt, solange `ALLOW_REGISTRATION` nicht auf

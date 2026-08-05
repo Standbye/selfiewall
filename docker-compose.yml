@@ -1,7 +1,11 @@
 services:
   selfiewall:
+    # Fertiges Image aus der GitHub Container Registry (von GitHub Actions
+    # gebaut). Mit SELFIEWALL_IMAGE lässt sich eine bestimmte Version pinnen,
+    # z. B. ghcr.io/standbye/selfiewall:sha-1a2b3c4
+    image: ${SELFIEWALL_IMAGE:-ghcr.io/standbye/selfiewall:latest}
+    # Fallback: "docker compose up -d --build" baut lokal aus dem Quellcode
     build: .
-    image: selfiewall:latest
     restart: unless-stopped
     ports:
       # Auf dem Server z. B. SELFIEWALL_BIND=127.0.0.1:3005 setzen (nur lokal
