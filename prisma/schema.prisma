@@ -140,9 +140,13 @@ model Subscriber {
   eventId   String
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   email     String
+  // Pro Gerät nur eine Adresse: verhindert, dass jemand über viele Uploads
+  // beliebige fremde Adressen als Empfänger einschleust.
+  deviceKey String
   createdAt DateTime @default(now())
 
   @@unique([eventId, email])
+  @@unique([eventId, deviceKey])
   @@map("subscriber")
 }
 

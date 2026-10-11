@@ -82,7 +82,8 @@ export async function sendGalleryMail(opts: {
         from: process.env.MAIL_FROM,
         to: process.env.MAIL_FROM,
         bcc: chunk,
-        subject: `Die Fotos von ${opts.eventTitle} sind da 📸`,
+        // Zeilenumbrüche aus dem Titel entfernen (Header-Injection)
+        subject: `Die Fotos von ${opts.eventTitle.replace(/[\r\n]+/g, " ")} sind da 📸`,
         text,
         html,
       });

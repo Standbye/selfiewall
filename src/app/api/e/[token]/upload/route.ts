@@ -18,6 +18,8 @@ const DEVICE_LIMIT = 10;
  * Gäste am selben WLAN bzw. Mobilfunk-NAT und teilen sich eine IP.
  */
 const IP_LIMIT = 300;
+/** Obergrenze für Empfängeradressen je Event — Notbremse gegen Masseneintrag. */
+const MAX_SUBSCRIBERS = 1000;
 const UPLOADER_COOKIE = "sw_uploader";
 
 export async function POST(
@@ -136,13 +138,29 @@ export async function POST(
     await fs.writeFile(photoPath(event.id, photo.id, "thumb"), thumbBuffer);
   }
 
-  // Optionale E-Mail für den Galerie-Link merken (pro Event nur einmal)
+  // Optionale E-Mail für den Galerie-Link merken. Pro Gerät genau eine
+  // Adresse: sonst könnte jemand über viele Uploads beliebige fremde
+  // Adressen eintragen, an die der Veranstalter dann unfreiwillig mailt.
   if (email && event.collectEmails && /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(email)) {
-    await prisma.subscriber
-      .create({ data: { eventId: event.id, email } })
-      .catch(() => {
-        // Adresse ist für dieses Event bereits eingetragen
-      });
+    const existing = await prisma.subscriber.findUnique({
+      where: { eventId_deviceKey: { eventId: event.id, deviceKey: uploaderKey } },
+    });
+    if (existing) {
+      // Tippfehler korrigieren erlaubt, aber keine zweite Adresse
+      if (existing.email !== email) {
+        await prisma.subscriber
+          .update({ where: { id: existing.id }, data: { email } })
+          .catch(() => {});
+      }
+    } else if (
+      (await prisma.subscriber.count({ where: { eventId: event.id } })) < MAX_SUBSCRIBERS
+    ) {
+      await prisma.subscriber
+        .create({ data: { eventId: event.id, email, deviceKey: uploaderKey } })
+        .catch(() => {
+          // Adresse ist für dieses Event bereits eingetragen
+        });
+    }
   }
 
   if (status === "approved") {

@@ -4,15 +4,32 @@ import fs from "node:fs";
 import { ZipArchive } from "archiver";
 import { prisma } from "@/lib/prisma";
 import { photoPath } from "@/lib/storage";
+import { allow, clientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Ein ZIP enthält alle Fotos des Events und ist damit teuer. Der Link ist
+ * öffentlich, deshalb pro IP begrenzen — großzügig genug für eine Familie,
+ * die sich die Bilder mehrfach holt.
+ */
+const ZIP_LIMIT = 10;
+const ZIP_WINDOW_MS = 10 * 60 * 1000;
+
 /** Öffentlicher ZIP-Download über den Galerie-Link (ohne Login). */
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ galleryToken: string }> }
 ) {
   const { galleryToken } = await params;
+
+  const ip = clientIp(req);
+  if (ip && !allow(`gzip:${ip}`, ZIP_LIMIT, ZIP_WINDOW_MS)) {
+    return new Response(
+      "Zu viele Downloads in kurzer Zeit – bitte in ein paar Minuten erneut versuchen.",
+      { status: 429, headers: { "Retry-After": "600" } }
+    );
+  }
   const event = await prisma.event.findUnique({ where: { galleryToken } });
   if (!event || !event.galleryEnabled) {
     return new Response("Not found", { status: 404 });
