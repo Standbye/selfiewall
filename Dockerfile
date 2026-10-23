@@ -11,7 +11,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npx prisma generate && npm run build
+# public/ kann leer sein (Git versioniert keine leeren Ordner)
+RUN mkdir -p public && npx prisma generate && npm run build
 
 # ---- Laufzeit ----
 FROM node:22-alpine AS runner
